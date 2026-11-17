@@ -1,0 +1,27 @@
+{
+  "slug": "hello-simple",
+  "name": "שלום עולם (פשוטה)",
+  "description": "אפליקציית דוגמה פשוטה: HTML + bahad.js — פתקים אישיים ולוח מחלקתי",
+  "tier": "simple",
+  "icon": "icon.svg",
+  "tags": ["כלים"],
+  "authors": ["bahad-portal"],
+  "status": "beta",
+  "scopes": ["profile", "unit", "push"],
+  "collections": {
+    "notes": { "read": "own", "create": "any", "maxPerUser": 50 },
+    "board": {
+      "read": "platoon",
+      "create": "any",
+      "moderate": "commander",
+      "maxPerUser": 20,
+      "schema": {
+        "type": "object",
+        "required": ["text"],
+        "properties": { "text": { "type": "string", "minLength": 1, "maxLength": 200 } },
+        "additionalProperties": false
+      }
+    }
+  },
+  "version": "1.0.0"
+}

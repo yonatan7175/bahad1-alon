@@ -1,0 +1,9 @@
+# /etc/caddy/Caddyfile — HTTPS (automatic Let's Encrypt) in front of the portal.
+# Replace portal.example.com with your domain (DNS A/AAAA record → this server).
+portal.example.com {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3000 {
+		# Server-Sent Events (/api/platform/events): stream immediately, never buffer.
+		flush_interval -1
+	}
+}

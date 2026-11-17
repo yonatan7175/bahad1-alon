@@ -1,0 +1,5 @@
+{
+  "$comment": "Repository-level settings used by scripts (CODEOWNERS, review). Set the owner with: pnpm set-owner <github-username>",
+  "owner": "REPLACE-ME",
+  "coreLabel": "core"
+}

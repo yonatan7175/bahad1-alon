@@ -1,0 +1,11 @@
+# /etc/systemd/system/bahad-push.timer — every minute.
+[Unit]
+Description=Bahad: push sender every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=5s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

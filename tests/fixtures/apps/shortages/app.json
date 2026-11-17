@@ -1,0 +1,32 @@
+{
+  "slug": "shortages",
+  "name": "ריכוז חוסרים",
+  "description": "דיווח על ציוד חסר; המפקד/ת רואה ריכוז של כל הפלוגה ומסמן/ת מה טופל",
+  "tier": "simple",
+  "icon": "icon.svg",
+  "tags": ["לוגיסטיקה"],
+  "authors": ["bahad-portal"],
+  "status": "hidden",
+  "scopes": ["profile", "role", "unit"],
+  "collections": {
+    "reports": {
+      "read": "own",
+      "create": "any",
+      "moderate": "commander",
+      "maxPerUser": 30,
+      "schema": {
+        "type": "object",
+        "required": ["item", "qty", "category", "status"],
+        "properties": {
+          "item": { "type": "string", "minLength": 1, "maxLength": 60 },
+          "qty": { "type": "integer", "minimum": 1, "maximum": 99 },
+          "category": { "type": "string", "enum": ["ציוד אישי", "ביגוד", "היגיינה", "כללי"] },
+          "note": { "type": "string", "maxLength": 200 },
+          "status": { "type": "string", "enum": ["open", "handled"] }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "version": "0.1.0"
+}

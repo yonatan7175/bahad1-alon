@@ -1,0 +1,11 @@
+# /etc/systemd/system/bahad-backup.service — weekly encrypted backup (scripts/backup.sh).
+# /etc/bahad/backup.env: DATABASE_URL=…  BACKUP_AGE_RECIPIENT=age1…  BACKUP_DIR=/var/backups/bahad
+[Unit]
+Description=Bahad: encrypted database backup
+
+[Service]
+Type=oneshot
+User=bahad
+EnvironmentFile=/etc/bahad/backup.env
+WorkingDirectory=/opt/bahad/src
+ExecStart=/usr/bin/env bash scripts/backup.sh

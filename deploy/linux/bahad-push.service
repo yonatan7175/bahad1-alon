@@ -1,0 +1,11 @@
+# /etc/systemd/system/bahad-push.service — sends due push notifications (run by bahad-push.timer).
+# Alternative: BAHAD_INTERNAL_CRON=1 in /etc/bahad/env (no timers needed on a single box).
+[Unit]
+Description=Bahad: send due push notifications
+After=bahad.service
+
+[Service]
+Type=oneshot
+User=bahad
+# /etc/bahad/cron-header contains one line:  x-cron-secret: <CRON_SECRET>   (mode 600, owner bahad)
+ExecStart=/usr/bin/curl --fail --silent --show-error --max-time 50 -X POST -H @/etc/bahad/cron-header http://127.0.0.1:3000/api/cron/push

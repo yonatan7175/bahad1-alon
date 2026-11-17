@@ -1,0 +1,51 @@
+# Comments on a PR when an app adds a sensitive scope (contact/push) or widens a
+# collection's data rules (plan 08 — Scope diff), and labels it for owner approval.
+#
+# SECURITY: runs with pull_request_target (write token, works for forks) but NEVER
+# executes PR code. It checks out the BASE branch, fetches the PR head as git data, and
+# reads apps/*/app.json via `git show` (scripts/scope-diff.ts from the base branch).
+name: Scope diff
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths: ["apps/**/app.json"]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  scope-diff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Fetch the PR head as data only
+        run: git fetch --no-tags origin "+refs/pull/${{ github.event.pull_request.number }}/head:refs/remotes/pr/head"
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - id: diff
+        run: pnpm -s scope-diff --base "${{ github.event.pull_request.base.sha }}" --head refs/remotes/pr/head --out scope-diff.md
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const body = fs.readFileSync("scope-diff.md", "utf8");
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const mine = comments.find((c) => c.user.type === "Bot" && c.body.includes("<!-- bahad-scope-diff -->"));
+            if (mine) await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body });
+            else await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            if ("${{ steps.diff.outputs.needs_approval }}" === "true") {
+              await github.rest.issues.addLabels({ owner, repo, issue_number, labels: ["needs-owner-approval"] });
+            }

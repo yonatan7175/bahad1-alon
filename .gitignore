@@ -1,0 +1,38 @@
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+*.tsbuildinfo
+
+# generated at build time (pnpm gen) — never edit, never commit
+/src/generated/
+/public/apps/
+/public/app-icons/
+/public/bahad.js
+/public/bahad.css
+/public/bahad.d.ts
+/public/llms.txt
+/public/llms-full.txt
+
+# local data / secrets
+/.data/
+.env*
+!.env.example
+*.pem
+/backups/
+
+# tests
+/coverage
+/test-results/
+/playwright-report/
+/tests/e2e/.data/
+
+# misc
+.DS_Store
+.vercel
+npm-debug.log*
+.pnpm-debug.log*
+/.next-e2e/

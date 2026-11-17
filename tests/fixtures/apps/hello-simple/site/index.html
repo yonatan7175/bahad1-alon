@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>שלום עולם</title>
+  <link rel="stylesheet" href="/bahad.css" />
+  <script src="/bahad.js"></script>
+</head>
+<body>
+  <h1 id="hello">שלום!</h1>
+  <p class="muted" id="unit"></p>
+
+  <section class="card">
+    <h2>הפתקים שלי <span class="badge">רק אני רואה</span></h2>
+    <form id="note-form" class="row">
+      <label for="note" class="muted" style="margin:0">פתק חדש</label>
+      <input id="note" maxlength="200" required placeholder="מה לזכור?" />
+      <button type="submit">הוספה</button>
+    </form>
+    <ul class="list" id="notes"></ul>
+  </section>
+
+  <section class="card">
+    <h2>לוח המחלקה <span class="badge">מתעדכן חי</span></h2>
+    <form id="board-form" class="row">
+      <label for="post" class="muted" style="margin:0">הודעה למחלקה</label>
+      <input id="post" maxlength="200" required placeholder="כתבו משהו למחלקה" />
+      <button type="submit">פרסום</button>
+    </form>
+    <ul class="list" id="board"></ul>
+  </section>
+
+  <section class="card">
+    <h2>התראות</h2>
+    <button id="remind" class="secondary" type="button">תזכורת לעצמי בעוד דקה</button>
+  </section>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const notes = bahad.data.collection("notes");
+    const board = bahad.data.collection("board");
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    const fail = (e) => bahad.ui.toast("שגיאה: " + (e && e.message ? e.message : e));
+
+    function item(rec, canDelete, label) {
+      const li = document.createElement("li");
+      li.className = "row";
+      li.innerHTML = `<span style="flex:1">${esc(rec.data.text)}${label ? ` <small>— ${esc(rec.owner.name)}</small>` : ""}</span>`;
+      if (canDelete) {
+        const b = document.createElement("button");
+        b.className = "secondary";
+        b.type = "button";
+        b.textContent = "מחיקה";
+        b.setAttribute("aria-label", "מחיקת " + rec.data.text);
+        b.onclick = () => (label ? board : notes).remove(rec.id).then(label ? loadBoard : loadNotes).catch(fail);
+        li.appendChild(b);
+      }
+      return li;
+    }
+
+    async function loadNotes() {
+      const list = await notes.list({ limit: 50 });
+      $("notes").replaceChildren(...list.map((r) => item(r, true, false)));
+      if (!list.length) $("notes").innerHTML = "<li class='muted'>אין פתקים עדיין.</li>";
+    }
+    let me;
+    async function loadBoard() {
+      const list = await board.list({ limit: 50 });
+      $("board").replaceChildren(...list.map((r) => item(r, r.mine || me.role === "commander", true)));
+      if (!list.length) $("board").innerHTML = "<li class='muted'>הלוח ריק.</li>";
+    }
+
+    $("note-form").onsubmit = async (e) => {
+      e.preventDefault();
+      const text = $("note").value.trim();
+      if (!text) return;
+      try { await notes.add({ text }); $("note").value = ""; await loadNotes(); } catch (err) { fail(err); }
+    };
+    $("board-form").onsubmit = async (e) => {
+      e.preventDefault();
+      const text = $("post").value.trim();
+      if (!text) return;
+      try { await board.add({ text }); $("post").value = ""; bahad.ui.toast("פורסם ✔"); } catch (err) { fail(err); }
+    };
+    $("remind").onclick = async () => {
+      try {
+        await bahad.push.notify({ to: "me", title: "תזכורת משלום עולם", body: "עברה דקה ⏰", at: new Date(Date.now() + 60000).toISOString() });
+        bahad.ui.toast("תזכורת תישלח בעוד דקה (אם הפעלתם התראות בפרופיל)");
+      } catch (err) { fail(err); }
+    };
+
+    (async () => {
+      await bahad.ready();
+      me = await bahad.user.me();
+      $("hello").textContent = "שלום, " + me.name + "!";
+      $("unit").textContent = [me.company && me.company.name, me.platoon && me.platoon.name].filter(Boolean).join(" · ");
+      bahad.ui.setTitle("שלום עולם");
+      await Promise.all([loadNotes(), loadBoard()]);
+      board.subscribe(() => loadBoard().catch(fail));
+    })().catch(fail);
+  </script>
+</body>
+</html>

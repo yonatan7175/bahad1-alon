@@ -1,0 +1,353 @@
+@import "tailwindcss";
+@import "../platform/client/tokens.css";
+
+/* Heebo, self-hosted (no external requests). Same files simple apps get via /bahad.css. */
+@font-face {
+  font-family: "Heebo";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/heebo-hebrew.woff2") format("woff2");
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+@font-face {
+  font-family: "Heebo";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/heebo-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@theme inline {
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-bg: var(--bg);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-fg: var(--text);
+  --color-muted: var(--text-muted);
+  --color-subtle: var(--text-subtle);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --font-sans: var(--font);
+  --radius-card: var(--radius);
+  --radius-ctl: var(--radius-sm);
+  --shadow-soft: var(--shadow);
+  --shadow-lift: var(--shadow-lg);
+  --animate-rise: rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-fade: fade 0.3s ease both;
+  --animate-pop: pop 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-feature-settings: "kern";
+  }
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+  }
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--ring);
+    border-radius: 10px;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .btn,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-danger {
+    @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-ctl px-4 text-[15px] font-semibold transition-[background-color,box-shadow,transform,opacity] duration-150 select-none active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn {
+    background: var(--accent);
+    color: var(--accent-contrast);
+    box-shadow: var(--shadow-sm), inset 0 1px 0 rgb(255 255 255 / 0.12);
+  }
+  .btn:hover {
+    background: var(--accent-hover);
+  }
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover {
+    background: var(--surface-2);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+  }
+  .btn-ghost:hover {
+    background: var(--surface-2);
+  }
+  .btn-danger {
+    background: var(--danger);
+    color: #fff;
+  }
+  .btn-danger:hover {
+    filter: brightness(1.05);
+  }
+  .icon-btn {
+    @apply inline-flex size-11 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-fg;
+  }
+  .card {
+    @apply rounded-card border border-line bg-surface p-5 shadow-soft;
+  }
+  .field {
+    @apply block w-full min-h-12 rounded-ctl border border-line-strong/70 bg-surface px-3.5 py-2.5 text-[15px] text-fg transition-[border-color,box-shadow] placeholder:text-subtle hover:border-line-strong;
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--ring);
+  }
+  select.field {
+    @apply appearance-none bg-no-repeat pe-9;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23879088' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: left 0.75rem center;
+  }
+  .label {
+    @apply mb-1.5 mt-4 block text-sm font-semibold text-fg;
+  }
+  .hint {
+    @apply mt-1 text-xs text-muted;
+  }
+  .chip {
+    @apply inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-4 text-sm font-medium text-fg shadow-[var(--shadow-sm)] transition-colors hover:bg-surface-2;
+  }
+  .chip[aria-pressed="true"],
+  .chip[aria-checked="true"],
+  .chip[aria-current="page"] {
+    background: var(--text);
+    color: var(--bg);
+    border-color: var(--text);
+  }
+  .chip .count {
+    @apply rounded-full bg-surface-2 px-1.5 text-[11px] font-bold tabular-nums text-muted;
+  }
+  .chip[aria-pressed="true"] .count {
+    background: color-mix(in srgb, var(--bg) 20%, transparent);
+    color: var(--bg);
+  }
+  .badge,
+  .badge-beta,
+  .badge-hidden,
+  .badge-accent,
+  .badge-danger,
+  .badge-warning {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold whitespace-nowrap;
+  }
+  .badge-beta {
+    @apply bg-gold-soft text-gold;
+  }
+  .badge-hidden {
+    @apply bg-surface-3 text-muted;
+  }
+  .badge-accent {
+    @apply bg-accent-soft text-accent-ink;
+  }
+  .badge-danger {
+    @apply bg-danger-soft text-danger;
+  }
+  .badge-warning {
+    @apply bg-warning-soft text-warning;
+  }
+  .skeleton {
+    @apply animate-pulse rounded-card bg-surface-2;
+  }
+  .section-title {
+    @apply text-xs font-bold tracking-wide text-subtle;
+  }
+  .hero {
+    background: var(--hero);
+    color: var(--hero-text);
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+  /* subtle oak-leaf pattern on hero surfaces */
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.09;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cpath d='M36 10c6 6 7 12 3 16 5-1 9 2 9 7-4 0-7 1-9 3 4 3 4 8 0 11-3-2-6-2-8 0 1 4-1 7-5 8 1-5-1-9-4-11 3-2 4-5 3-8-4 1-8-1-9-5 4-1 7-3 8-6-4-3-4-8 0-11 2 3 6 4 9 2-2-4 0-8 3-6z' fill='none' stroke='white' stroke-width='1.4'/%3E%3C/svg%3E");
+    background-size: 72px 72px;
+  }
+  .glass {
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: saturate(1.4) blur(14px);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  }
+  .menu {
+    @apply z-50 min-w-60 overflow-hidden rounded-card border border-line bg-surface p-1.5 shadow-lift animate-pop;
+  }
+  .menu-item {
+    @apply flex min-h-11 w-full items-center gap-3 rounded-ctl px-3 text-start text-[15px] text-fg transition-colors hover:bg-surface-2;
+  }
+  .menu-item svg {
+    @apply size-[18px] text-muted;
+  }
+  .list-row {
+    @apply flex min-h-14 items-center gap-3 px-4 py-3;
+  }
+  .list-group {
+    @apply overflow-hidden rounded-card border border-line bg-surface shadow-soft divide-y divide-line;
+  }
+}
+
+/* Developer docs (rendered markdown) */
+.docs {
+  @apply text-[15.5px] leading-relaxed;
+}
+.docs h1 {
+  @apply mb-4 text-3xl font-extrabold;
+}
+.docs h2 {
+  @apply mb-3 mt-10 border-b border-line pb-2 text-xl font-bold;
+}
+.docs h3 {
+  @apply mb-2 mt-6 text-lg font-bold;
+}
+.docs p,
+.docs ul,
+.docs ol {
+  @apply mb-4;
+}
+.docs ul {
+  @apply list-disc ps-6 marker:text-subtle;
+}
+.docs ol {
+  @apply list-decimal ps-6 marker:text-subtle;
+}
+.docs li {
+  @apply mb-1.5;
+}
+.docs a {
+  @apply font-medium text-accent underline decoration-accent/30 underline-offset-4 hover:decoration-accent;
+}
+.docs blockquote {
+  @apply mb-4 rounded-ctl border-s-4 border-gold bg-gold-soft/60 px-4 py-3 text-fg;
+}
+.docs blockquote p {
+  @apply mb-0;
+}
+.docs :not(pre) > code {
+  @apply rounded-md border border-line bg-surface-2 px-1.5 py-0.5 text-[0.88em] font-medium;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.docs pre {
+  @apply mb-0 max-h-[32rem] overflow-auto rounded-card p-4 pt-12 text-[13px] leading-relaxed;
+  background: #0f1512;
+  color: #d9e6dc;
+  direction: ltr;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.docs pre code {
+  @apply bg-transparent p-0;
+}
+.docs table {
+  @apply mb-5 block w-full overflow-x-auto rounded-ctl border border-line text-sm;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.docs th,
+.docs td {
+  @apply border-b border-line px-3 py-2 text-start align-top;
+}
+.docs th {
+  @apply bg-surface-2 font-bold;
+}
+.docs tr:last-child td {
+  @apply border-b-0;
+}
+.docs .code-wrap {
+  @apply relative mb-5 overflow-hidden rounded-card shadow-soft;
+}
+.docs .copy-btn {
+  @apply absolute end-2 top-2 z-10 min-h-8 rounded-full border-0 px-3 text-xs;
+  background: rgb(255 255 255 / 0.1);
+  color: #e4efe7;
+  box-shadow: none;
+}
+.docs .copy-btn:hover {
+  background: rgb(255 255 255 / 0.18);
+}

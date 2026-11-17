@@ -1,0 +1,106 @@
+/* Design tokens — SINGLE SOURCE for the portal (imported by src/app/globals.css)
+   and for simple apps (concatenated into /bahad.css by scripts/build-bahad-js.ts).
+   Palette: "oak" green (אלון) + warm sand highlights on soft paper-white / deep forest-night.
+   --accent is still a PLACEHOLDER until the battalion color is approved (plan Q1). */
+:root {
+  --bg: #f3f4ef;
+  --bg-elevated: #fafaf7;
+  --surface: #ffffff;
+  --surface-2: #eef0e9;
+  --surface-3: #e3e7dd;
+  --text: #121713;
+  --text-muted: #59645c;
+  --text-subtle: #879088;
+  --border: #e0e4da;
+  --border-strong: #c9cfc3;
+  --accent: #2f6b4f;
+  --accent-hover: #275b43;
+  --accent-contrast: #ffffff;
+  --accent-soft: #e1eee6;
+  --accent-ink: #1c4a35;
+  --gold: #b07f22;
+  --gold-soft: #f5ead2;
+  --danger: #b42318;
+  --danger-soft: #fdeceb;
+  --success: #1d7a43;
+  --success-soft: #e2f3e8;
+  --warning: #a35b07;
+  --warning-soft: #fcefd9;
+  --hero: linear-gradient(135deg, #173d2c 0%, #24563f 45%, #34775a 100%);
+  --hero-text: #f4f8f4;
+  --shadow-sm: 0 1px 2px rgb(16 24 18 / 0.06), 0 1px 1px rgb(16 24 18 / 0.04);
+  --shadow: 0 1px 2px rgb(16 24 18 / 0.05), 0 4px 12px -2px rgb(16 24 18 / 0.08);
+  --shadow-lg: 0 2px 4px rgb(16 24 18 / 0.05), 0 16px 40px -8px rgb(16 24 18 / 0.18);
+  --ring: 0 0 0 3px rgb(47 107 79 / 0.28);
+  --radius: 20px;
+  --radius-sm: 12px;
+  --tap: 44px;
+  --font: "Heebo", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b0e0c;
+    --bg-elevated: #101411;
+    --surface: #141a16;
+    --surface-2: #1b221d;
+    --surface-3: #242c26;
+    --text: #e8eee9;
+    --text-muted: #9ba79f;
+    --text-subtle: #6c776f;
+    --border: #232b25;
+    --border-strong: #323c35;
+    --accent: #6cc49a;
+    --accent-hover: #85d2ad;
+    --accent-contrast: #05140c;
+    --accent-soft: #15291f;
+    --accent-ink: #a6e3c5;
+    --gold: #d9b25c;
+    --gold-soft: #2b2414;
+    --danger: #f2877d;
+    --danger-soft: #34160f;
+    --success: #6fd394;
+    --success-soft: #11291b;
+    --warning: #e8b25a;
+    --warning-soft: #2e2210;
+    --hero: linear-gradient(135deg, #0f261b 0%, #163a2a 50%, #1f5039 100%);
+    --hero-text: #eef6f0;
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 6px 16px -4px rgb(0 0 0 / 0.5);
+    --shadow-lg: 0 2px 4px rgb(0 0 0 / 0.4), 0 18px 44px -10px rgb(0 0 0 / 0.7);
+    --ring: 0 0 0 3px rgb(108 196 154 / 0.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b0e0c;
+  --bg-elevated: #101411;
+  --surface: #141a16;
+  --surface-2: #1b221d;
+  --surface-3: #242c26;
+  --text: #e8eee9;
+  --text-muted: #9ba79f;
+  --text-subtle: #6c776f;
+  --border: #232b25;
+  --border-strong: #323c35;
+  --accent: #6cc49a;
+  --accent-hover: #85d2ad;
+  --accent-contrast: #05140c;
+  --accent-soft: #15291f;
+  --accent-ink: #a6e3c5;
+  --gold: #d9b25c;
+  --gold-soft: #2b2414;
+  --danger: #f2877d;
+  --danger-soft: #34160f;
+  --success: #6fd394;
+  --success-soft: #11291b;
+  --warning: #e8b25a;
+  --warning-soft: #2e2210;
+  --hero: linear-gradient(135deg, #0f261b 0%, #163a2a 50%, #1f5039 100%);
+  --hero-text: #eef6f0;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 6px 16px -4px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 2px 4px rgb(0 0 0 / 0.4), 0 18px 44px -10px rgb(0 0 0 / 0.7);
+  --ring: 0 0 0 3px rgb(108 196 154 / 0.35);
+  color-scheme: dark;
+}

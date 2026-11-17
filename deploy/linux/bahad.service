@@ -1,0 +1,33 @@
+# /etc/systemd/system/bahad.service — the portal (Next.js standalone server).
+[Unit]
+Description=Bahad portal (Next.js)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bahad
+Group=bahad
+WorkingDirectory=/opt/bahad/current
+EnvironmentFile=/etc/bahad/env
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=127.0.0.1
+Environment=NEXT_TELEMETRY_DISABLED=1
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+# Only needed if you run embedded PGlite (not recommended in production):
+# ReadWritePaths=/var/lib/bahad
+
+[Install]
+WantedBy=multi-user.target

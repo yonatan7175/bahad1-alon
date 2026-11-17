@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ריכוז חוסרים</title>
+  <link rel="stylesheet" href="/bahad.css" />
+  <script src="/bahad.js"></script>
+  <style>
+    .status-open { color: var(--warning); font-weight: 600; }
+    .status-handled { color: var(--success); font-weight: 600; }
+    .grid2 { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <p class="card muted" role="note">⚠️ אין לרשום מספרים סידוריים של נשק או ציוד, ואין לרשום מידע מסווג.</p>
+
+  <section class="card" id="report-card">
+    <h1>דיווח על חוסר</h1>
+    <form id="form">
+      <div class="grid2">
+        <div>
+          <label for="item">פריט</label>
+          <input id="item" maxlength="60" required placeholder="למשל: גרביים" />
+        </div>
+        <div>
+          <label for="qty">כמות</label>
+          <input id="qty" type="number" inputmode="numeric" min="1" max="99" value="1" required />
+        </div>
+      </div>
+      <label for="category">קטגוריה</label>
+      <select id="category">
+        <option>ציוד אישי</option>
+        <option>ביגוד</option>
+        <option>היגיינה</option>
+        <option>כללי</option>
+      </select>
+      <label for="note">הערה (לא חובה)</label>
+      <input id="note" maxlength="200" />
+      <p><button type="submit" style="margin-top:12px">שליחה</button></p>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>הדיווחים שלי</h2>
+    <ul class="list" id="mine"></ul>
+  </section>
+
+  <section class="card hidden" id="summary-card">
+    <h2>ריכוז הפלוגה <span class="badge" id="open-count"></span></h2>
+    <p class="muted">כל הדיווחים הפתוחים בפלוגה, לפי פריט.</p>
+    <ul class="list" id="summary"></ul>
+  </section>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const reports = bahad.data.collection("reports");
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    const fail = (e) => bahad.ui.toast("שגיאה: " + (e && e.message ? e.message : e));
+    let me = null;
+
+    function statusLabel(s) {
+      return s === "handled" ? '<span class="status-handled">טופל ✔</span>' : '<span class="status-open">פתוח</span>';
+    }
+
+    async function load() {
+      const all = await reports.list({ limit: 200 });
+      const mine = all.filter((r) => r.mine);
+      $("mine").innerHTML = mine.length ? "" : "<li class='muted'>אין דיווחים.</li>";
+      for (const r of mine) {
+        const li = document.createElement("li");
+        li.className = "row";
+        li.innerHTML = `<span style="flex:1"><b>${esc(r.data.item)}</b> × ${esc(r.data.qty)} <small>(${esc(r.data.category)})</small> — ${statusLabel(r.data.status)}${r.data.note ? `<br><small>${esc(r.data.note)}</small>` : ""}</span>`;
+        const del = document.createElement("button");
+        del.className = "secondary";
+        del.type = "button";
+        del.textContent = "מחיקה";
+        del.setAttribute("aria-label", "מחיקת " + r.data.item);
+        del.onclick = () => reports.remove(r.id).then(load).catch(fail);
+        li.appendChild(del);
+        $("mine").appendChild(li);
+      }
+
+      const isCommander = me && (me.role === "commander" || me.role === "admin");
+      $("summary-card").classList.toggle("hidden", !isCommander);
+      if (!isCommander) return;
+      // Commanders/admins see every report they moderate (own company / everything).
+      const open = all.filter((r) => r.data.status === "open");
+      $("open-count").textContent = open.length + " פתוחים";
+      const groups = new Map();
+      for (const r of open) {
+        const key = r.data.item.trim();
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(r);
+      }
+      $("summary").innerHTML = groups.size ? "" : "<li class='muted'>אין חוסרים פתוחים 🎉</li>";
+      for (const [item, list] of [...groups.entries()].sort((a, b) => b[1].length - a[1].length)) {
+        const total = list.reduce((s, r) => s + r.data.qty, 0);
+        const li = document.createElement("li");
+        li.innerHTML = `<div class="row"><b style="flex:1">${esc(item)} — ${total}</b></div><small>${list.map((r) => esc(r.owner.name) + " (" + r.data.qty + ")").join(" · ")}</small>`;
+        const done = document.createElement("button");
+        done.type = "button";
+        done.textContent = "סימון כטופל";
+        done.className = "secondary";
+        done.style.marginTop = "6px";
+        done.onclick = async () => {
+          try {
+            for (const r of list) await reports.update(r.id, { status: "handled" });
+            bahad.ui.toast("סומן כטופל ✔");
+            await load();
+          } catch (e) { fail(e); }
+        };
+        li.appendChild(done);
+        $("summary").appendChild(li);
+      }
+    }
+
+    $("form").onsubmit = async (e) => {
+      e.preventDefault();
+      const item = $("item").value.trim();
+      const qty = parseInt($("qty").value, 10);
+      if (!item || !(qty >= 1 && qty <= 99)) return bahad.ui.toast("נא למלא פריט וכמות (1–99)");
+      const data = { item, qty, category: $("category").value, status: "open" };
+      const note = $("note").value.trim();
+      if (note) data.note = note;
+      try {
+        await reports.add(data);
+        $("item").value = ""; $("qty").value = "1"; $("note").value = "";
+        bahad.ui.toast("הדיווח נשלח ✔");
+        await load();
+      } catch (err) { fail(err); }
+    };
+
+    (async () => {
+      await bahad.ready();
+      me = await bahad.user.me();
+      bahad.ui.setTitle("ריכוז חוסרים" + (me.company ? " · " + me.company.name : ""));
+      await load();
+      reports.subscribe(() => load().catch(fail));
+    })().catch(fail);
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "slug": "officer-character",
+  "name": "דמות הקצין",
+  "description": "כלים נוחים לקורס קצינים — כתיבה ועבודה על דמות הקצין (אתר חיצוני: write.bahad1.com)",
+  "tier": "external",
+  "url": "https://write.bahad1.com/",
+  "icon": "icon.svg",
+  "tags": ["לומדות", "כלים"],
+  "authors": ["REPLACE-ME"],
+  "status": "live",
+  "version": "1.0.0"
+}

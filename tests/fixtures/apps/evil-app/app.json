@@ -1,0 +1,15 @@
+{
+  "slug": "evil-app",
+  "name": "אפליקציה זדונית (בדיקות)",
+  "description": "Security test fixture: tries to break out of the sandbox. Never shipped.",
+  "tier": "simple",
+  "icon": "icon.svg",
+  "tags": ["כלים"],
+  "authors": ["security-tests"],
+  "status": "live",
+  "scopes": ["profile"],
+  "collections": {
+    "secrets": { "read": "own", "create": "any" }
+  },
+  "version": "1.0.0"
+}
