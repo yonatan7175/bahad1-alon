@@ -35,10 +35,14 @@ export interface Me {
   avatarUrl: string | null;
   /** scope "role" */
   role?: Role;
+  /** scope "role": true for admins and for managers of this app (they moderate its collections battalion-wide) */
+  manager?: boolean;
   /** scope "unit" */
   company?: UnitRef | null;
   /** scope "unit" */
   platoon?: UnitRef | null;
+  /** scope "unit": the room number the user gave at sign-up (e.g. "241") */
+  room?: string | null;
   /** scope "contact" (sensitive) */
   email?: string;
   /** scope "contact" (sensitive) */

@@ -17,7 +17,7 @@ test("new user: sign-in → onboarding → pending → admin approves → home",
   await u.locator("#name").fill("New User");
   await u.locator("#company").selectOption({ label: "פלוגה ב'" });
   await u.locator("#team").fill("3");
-  await u.locator("#room").fill("214");
+  await u.locator("#room").fill("241");
   await u.locator("#phone").fill("0521234567");
   await u.getByRole("button", { name: "שליחה לאישור" }).click();
   await expect(u.locator("form [role=alert]")).toContainText("שם מלא בעברית");

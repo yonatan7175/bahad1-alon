@@ -254,3 +254,33 @@ export async function setAppOverride(form: FormData) {
   } else back("apps", { error: "מצב לא תקין" });
   back("apps", { ok: "עודכן" });
 }
+
+// ── app managers (admins only): moderate ONE app's collections battalion-wide ──
+
+export async function addAppManager(form: FormData) {
+  const s = await requireAdminAction();
+  const slug = String(form.get("slug") ?? "");
+  if (!getApp(slug)) back("apps", { error: "אפליקציה לא קיימת" });
+  const user = String(form.get("user") ?? "");
+  if (!uuidRe.test(user)) back("apps", { error: "יש לבחור משתמש" });
+  const db = await getDb();
+  const { rows } = await db.query<{ full_name: string | null }>("select full_name from public.profiles where id = $1 and status = 'approved'", [user]);
+  if (!rows[0]) back("apps", { error: "המשתמש לא נמצא או לא מאושר" });
+  await db.query(
+    "insert into public.app_managers (app_slug, profile_id, granted_by) values ($1, $2, $3) on conflict do nothing",
+    [slug, user, s.profile.id],
+  );
+  await audit(db, s.profile.id, "app.manager.add", user, { app: slug });
+  back("apps", { ok: `${rows[0].full_name ?? "המשתמש"} מנהל/ת עכשיו את האפליקציה` });
+}
+
+export async function removeAppManager(form: FormData) {
+  const s = await requireAdminAction();
+  const slug = String(form.get("slug") ?? "");
+  const user = String(form.get("user") ?? "");
+  if (!uuidRe.test(user)) back("apps", { error: "מזהה לא תקין" });
+  const db = await getDb();
+  await db.query("delete from public.app_managers where app_slug = $1 and profile_id = $2", [slug, user]);
+  await audit(db, s.profile.id, "app.manager.remove", user, { app: slug });
+  back("apps", { ok: "ההרשאה הוסרה" });
+}

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bell, ChevronLeft, Palette, Phone, ShieldCheck } from "lucide-react";
+import { Bell, ChevronLeft, DoorOpen, Palette, Phone, ShieldCheck } from "lucide-react";
 import { requireApproved } from "@/platform/auth/session";
 import { getDb } from "@/platform/server/db";
 import { loadOverrides, visibleApps } from "@/platform/server/registry";
@@ -12,6 +12,7 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationsToggle } from "./notifications";
 import { PhoneForm } from "./phone-form";
+import { RoomForm } from "./room-form";
 import { PrivacyToggles } from "./privacy-toggles";
 import type { ReactNode } from "react";
 
@@ -61,6 +62,10 @@ export default async function ProfilePage() {
         <div className="mt-5 grid gap-4">
           <Section icon={<Phone aria-hidden="true" />} title="טלפון נייד">
             <PhoneForm phone={p.phone ?? ""} />
+          </Section>
+
+          <Section icon={<DoorOpen aria-hidden="true" />} title="חדר במגורים">
+            <RoomForm room={p.room ?? ""} />
           </Section>
 
           <Section icon={<Bell aria-hidden="true" />} title="התראות במכשיר הזה">

@@ -81,9 +81,12 @@ export function OnboardingForm({
         id="room"
         name="room"
         required
-        maxLength={8}
+        maxLength={3}
+        inputMode="numeric"
+        pattern="[2-4](3[7-9]|4[0-9]|5[0-6])"
+        title="קומות 2–4, חדרים 37–56 (למשל 241)"
         dir="ltr"
-        placeholder="214"
+        placeholder="241"
         value={room}
         onChange={(e) => setRoom(e.target.value)}
         className="field text-end"

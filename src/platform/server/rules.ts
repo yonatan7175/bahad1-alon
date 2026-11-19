@@ -9,6 +9,8 @@ export interface Actor {
   role: Role;
   companyId: string | null;
   platoonId: string | null;
+  /** Manager of THIS app (public.app_managers): moderates its collections battalion-wide, like an admin. */
+  appManager?: boolean;
 }
 
 export interface RecordOwnerInfo {
@@ -19,6 +21,7 @@ export interface RecordOwnerInfo {
 
 /** Moderation reach of the actor for this collection: every record, own company's records, or none. */
 export function moderationScope(actor: Actor, rule: CollectionRule): "all" | "company" | null {
+  if (rule.moderate !== "none" && actor.appManager) return "all";
   switch (rule.moderate) {
     case "none":
       return null;

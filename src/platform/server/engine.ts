@@ -101,11 +101,12 @@ async function loadCtx(db: Db, c: CallContext): Promise<Ctx> {
   if (!profile.last_seen_at || Date.now() - new Date(profile.last_seen_at).getTime() > 3600_000) {
     await db.query("update public.profiles set last_seen_at = now() where id = $1", [profile.id]);
   }
+  const { rows: mgr } = await db.query("select 1 from public.app_managers where app_slug = $1 and profile_id = $2", [app.slug, profile.id]);
   return {
     db,
     profile,
     app,
-    actor: { id: profile.id, role: profile.role, companyId: profile.company_id, platoonId: profile.platoon_id },
+    actor: { id: profile.id, role: profile.role, companyId: profile.company_id, platoonId: profile.platoon_id, appManager: mgr.length > 0 },
   };
 }
 
@@ -256,8 +257,12 @@ function me(ctx: Ctx): Me {
   const p = ctx.profile;
   const out: Me = { id: p.id, name: p.full_name ?? "ללא שם", avatarUrl: p.avatar_url };
   const s = ctx.app.effectiveScopes;
-  if (s.includes("role")) out.role = p.role;
+  if (s.includes("role")) {
+    out.role = p.role;
+    out.manager = ctx.actor.role === "admin" || !!ctx.actor.appManager;
+  }
   if (s.includes("unit")) {
+    out.room = p.room;
     out.company = p.company_id ? { id: p.company_id, name: p.company_name ?? "" } : null;
     out.platoon = p.platoon_id ? { id: p.platoon_id, name: p.platoon_name ?? "" } : null;
   }

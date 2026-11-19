@@ -412,6 +412,17 @@ function UnitsTab({ companies, platoons }: { companies: { id: string; name: stri
 
 async function AppsTab({ db }: { db: Awaited<ReturnType<typeof getDb>> }) {
   const overrides = await loadOverrides(db);
+  const managers = (
+    await db.query<{ app_slug: string; profile_id: string; full_name: string | null }>(
+      `select m.app_slug, m.profile_id, p.full_name from public.app_managers m
+         join public.profiles p on p.id = m.profile_id order by p.full_name`,
+    )
+  ).rows;
+  const people = (
+    await db.query<{ id: string; full_name: string | null; email: string }>(
+      "select id, full_name, email from public.profiles where status = 'approved' order by full_name nulls last limit 2000",
+    )
+  ).rows;
   return (
     <ul className="mt-4 space-y-2">
       {allApps().map((a) => {
@@ -463,6 +474,47 @@ async function AppsTab({ db }: { db: Awaited<ReturnType<typeof getDb>> }) {
                 </button>
               </form>
             </div>
+            {a.tier !== "external" && Object.keys(a.collections).length > 0 ? (
+              <div className="mt-3 border-t border-line pt-3">
+                <p className="text-sm font-semibold">מנהלי האפליקציה</p>
+                <p className="text-xs text-muted">רואים ומנהלים את כל הרשומות של האפליקציה בכל הגדוד (בלי הרשאות ניהול לאתר).</p>
+                <ul className="mt-2 flex flex-wrap gap-2">
+                  {managers
+                    .filter((m) => m.app_slug === a.slug)
+                    .map((m) => (
+                      <li key={m.profile_id}>
+                        <form action={A.removeAppManager} className="chip flex items-center gap-1.5">
+                          <input type="hidden" name="slug" value={a.slug} />
+                          <input type="hidden" name="user" value={m.profile_id} />
+                          {m.full_name ?? "ללא שם"}
+                          <button type="submit" className="text-muted hover:text-danger" aria-label={`הסרת ${m.full_name ?? ""} ממנהלי האפליקציה`}>
+                            <X className="size-3.5" aria-hidden="true" />
+                          </button>
+                        </form>
+                      </li>
+                    ))}
+                </ul>
+                <form action={A.addAppManager} className="mt-2 flex flex-wrap items-center gap-2">
+                  <input type="hidden" name="slug" value={a.slug} />
+                  <label className="sr-only" htmlFor={`mg-${a.slug}`}>
+                    הוספת מנהל/ת
+                  </label>
+                  <select id={`mg-${a.slug}`} name="user" defaultValue="" className="field w-auto max-w-full">
+                    <option value="" disabled>
+                      בחירת משתמש…
+                    </option>
+                    {people.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.full_name ?? p.email}
+                      </option>
+                    ))}
+                  </select>
+                  <button className="btn-secondary" type="submit">
+                    <Plus className="size-4" aria-hidden="true" /> הוספה
+                  </button>
+                </form>
+              </div>
+            ) : null}
           </li>
         );
       })}

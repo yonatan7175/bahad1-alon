@@ -116,8 +116,10 @@ function mockTransport(): Transport {
     name: role === "cadet" ? "חניך לדוגמה" : role === "commander" ? "מפקד לדוגמה" : "מנהל לדוגמה",
     avatarUrl: null,
     role,
+    manager: role === "admin",
     company: { id: "mock-company", name: "פלוגה א'" },
     platoon: role === "commander" ? null : { id: "mock-platoon", name: "מחלקה 1" },
+    room: "241",
     email: "cadet@example.com",
     phone: "050-0000000",
   };

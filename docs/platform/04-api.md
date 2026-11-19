@@ -15,8 +15,9 @@ bahad.isMock;                           // true כשרצים מחוץ לפורט
 // ── משתמש ─────────────────────────────────────────
 const me = await bahad.user.me();
 // { id, name, avatarUrl,
-//   role?,              // scope "role"
+//   role?, manager?,    // scope "role" (manager: מנהל האתר או מנהל של האפליקציה הזו)
 //   company?, platoon?, // { id, name } | null — scope "unit"
+//   room?,              // מספר החדר מההרשמה | null — scope "unit"
 //   email?, phone? }    // scope "contact"
 
 // ── נתונים (לכל אפליקציה ולכל אוסף; החוקים מ-app.json) ──
