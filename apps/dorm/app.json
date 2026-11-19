@@ -1,0 +1,305 @@
+{
+  "slug": "dorm",
+  "name": "מגורים",
+  "description": "דיווח חוסרים ותקלות בחדרים (נייר, שקיות, דלי, מגב, מנורה, הסקה), מפת המגורים ולוח בקרה לקל\"ג",
+  "tier": "full",
+  "icon": "icon.svg",
+  "tags": [
+    "לוגיסטיקה",
+    "יומיומי"
+  ],
+  "authors": [
+    "REPLACE-ME"
+  ],
+  "status": "beta",
+  "audience": [
+    "cadet",
+    "commander",
+    "admin"
+  ],
+  "scopes": [
+    "profile",
+    "role",
+    "unit"
+  ],
+  "collections": {
+    "tickets": {
+      "read": "all",
+      "create": "any",
+      "moderate": "admin",
+      "unique": [
+        "room",
+        "item",
+        "slot"
+      ],
+      "schema": {
+        "type": "object",
+        "required": [
+          "room",
+          "item",
+          "status",
+          "slot"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "room": {
+            "type": "string",
+            "enum": [
+              "237",
+              "238",
+              "239",
+              "240",
+              "241",
+              "242",
+              "243",
+              "244",
+              "245",
+              "246",
+              "247",
+              "248",
+              "249",
+              "250",
+              "251",
+              "252",
+              "253",
+              "254",
+              "255",
+              "256",
+              "337",
+              "338",
+              "339",
+              "340",
+              "341",
+              "342",
+              "343",
+              "344",
+              "345",
+              "346",
+              "347",
+              "348",
+              "349",
+              "350",
+              "351",
+              "352",
+              "353",
+              "354",
+              "355",
+              "356",
+              "437",
+              "438",
+              "439",
+              "440",
+              "441",
+              "442",
+              "443",
+              "444",
+              "445",
+              "446",
+              "447",
+              "448",
+              "449",
+              "450",
+              "451",
+              "452",
+              "453",
+              "454",
+              "455",
+              "456",
+              "2-wc1",
+              "2-wc2",
+              "2-lobby",
+              "3-wc1",
+              "3-wc2",
+              "3-lobby",
+              "4-wc1",
+              "4-wc2",
+              "4-lobby"
+            ]
+          },
+          "item": {
+            "type": "string",
+            "enum": [
+              "toilet_paper",
+              "trash_bags",
+              "bucket",
+              "mop",
+              "lamp",
+              "heating",
+              "other"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "in_progress",
+              "closed"
+            ]
+          },
+          "slot": {
+            "type": "string",
+            "description": "\"open\" while open (one open request per room+item); the record id once closed",
+            "pattern": "^(open|[0-9a-f-]{36})$"
+          },
+          "reply": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "handledBy": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "closedAt": {
+            "type": "string",
+            "maxLength": 40
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "item": {
+                  "const": "other"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "note"
+              ],
+              "properties": {
+                "note": {
+                  "minLength": 2
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "plus": {
+      "read": "all",
+      "create": "any",
+      "moderate": "admin",
+      "unique": [
+        "ticket",
+        "by"
+      ],
+      "schema": {
+        "type": "object",
+        "required": [
+          "ticket",
+          "by"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "by": {
+            "type": "string",
+            "maxLength": 40
+          }
+        }
+      }
+    },
+    "checks": {
+      "read": "all",
+      "create": "any",
+      "moderate": "admin",
+      "unique": [
+        "room",
+        "day"
+      ],
+      "window": {
+        "dateField": "day",
+        "maxDaysAhead": 0
+      },
+      "schema": {
+        "type": "object",
+        "required": [
+          "room",
+          "day"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "room": {
+            "type": "string",
+            "enum": [
+              "237",
+              "238",
+              "239",
+              "240",
+              "241",
+              "242",
+              "243",
+              "244",
+              "245",
+              "246",
+              "247",
+              "248",
+              "249",
+              "250",
+              "251",
+              "252",
+              "253",
+              "254",
+              "255",
+              "256",
+              "337",
+              "338",
+              "339",
+              "340",
+              "341",
+              "342",
+              "343",
+              "344",
+              "345",
+              "346",
+              "347",
+              "348",
+              "349",
+              "350",
+              "351",
+              "352",
+              "353",
+              "354",
+              "355",
+              "356",
+              "437",
+              "438",
+              "439",
+              "440",
+              "441",
+              "442",
+              "443",
+              "444",
+              "445",
+              "446",
+              "447",
+              "448",
+              "449",
+              "450",
+              "451",
+              "452",
+              "453",
+              "454",
+              "455",
+              "456"
+            ]
+          },
+          "day": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0.0"
+}
