@@ -138,34 +138,34 @@ test("laundry: calendar booking, live for others, weekly limit, my bookings, fin
   }
   const dialog = A.page.getByRole("dialog");
 
-  // book washer 2 at 20:00
-  await A.page.getByRole("button", { name: "כביסה 2 20:00–20:30 פנוי — שריון" }).click();
-  await expect(dialog).toContainText("כביסה 2");
+  // book the floor-1 washer at 20:00 (40-minute slots)
+  await A.page.getByRole("button", { name: "כביסה · קומה 1 20:00–20:40 פנוי — שריון" }).click();
+  await expect(dialog).toContainText("כביסה · קומה 1");
+  await expect(dialog).toContainText("יוצגו במשבצת");
   await dialog.getByRole("button", { name: "שריון", exact: true }).click();
-  await expect(A.page.getByRole("button", { name: "כביסה 2 20:00–20:30 השריון שלי" })).toBeVisible();
-  // B sees it taken, live
-  await expect(B.page.getByRole("button", { name: /כביסה 2 20:00–20:30 תפוס ע"י ישראל ישראלי/ })).toBeVisible({ timeout: 15_000 });
-  // …and can see who booked it (directory card) with a link to the full profile
-  await B.page.getByRole("button", { name: /כביסה 2 20:00–20:30 תפוס ע"י ישראל ישראלי/ }).click();
+  await expect(A.page.getByRole("button", { name: "כביסה · קומה 1 20:00–20:40 השריון שלי" })).toBeVisible();
+  // B sees it taken, live — with the booker's name (and phone, when the profile has one) on the slot
+  const taken = B.page.getByRole("button", { name: /כביסה · קומה 1 20:00–20:40 תפוס ע"י ישראל ישראלי/ });
+  await expect(taken).toBeVisible({ timeout: 15_000 });
+  await expect(taken).toContainText("ישראל ישראלי");
+  await taken.click();
   await expect(B.page.getByTestId("booker-card")).toContainText("ישראל ישראלי");
-  await expect(B.page.getByTestId("booker-card")).toContainText("פלוגה א'");
-  await expect(B.page.getByRole("link", { name: /לפרופיל המלא/ })).toHaveAttribute("href", /\/people\//);
   await expect(B.page.getByRole("dialog").getByRole("button", { name: /ביטול|פינוי/ })).toHaveCount(0); // a cadet can't free others' slots
   await B.page.keyboard.press("Escape");
 
   // second washer booking OK, third blocked by the weekly limit (2 washes / week)
-  await A.page.getByRole("button", { name: "כביסה 3 21:00–21:30 פנוי — שריון" }).click();
+  await A.page.getByRole("button", { name: "כביסה · קומה 3 21:20–22:00 פנוי — שריון" }).click();
   await dialog.getByRole("button", { name: "שריון", exact: true }).click();
-  await expect(A.page.getByRole("button", { name: "כביסה 3 21:00–21:30 השריון שלי" })).toBeVisible();
-  await A.page.getByRole("button", { name: "כביסה 4 22:00–22:30 פנוי — שריון" }).click();
+  await expect(A.page.getByRole("button", { name: "כביסה · קומה 3 21:20–22:00 השריון שלי" })).toBeVisible();
+  await A.page.getByRole("button", { name: "כביסה · קומה 1 22:00–22:40 פנוי — שריון" }).click();
   await expect(dialog).toContainText("ניצלת את 2");
   await expect(dialog.getByRole("button", { name: "שריון", exact: true })).toBeDisabled();
   await A.page.keyboard.press("Escape");
-  // dryers are a separate quota
+  // the dryer is a separate quota
   await A.page.getByRole("radio", { name: /ייבוש/ }).click();
-  await A.page.getByRole("button", { name: "מייבש 1 20:30–21:00 פנוי — שריון" }).click();
+  await A.page.getByRole("button", { name: "מייבש 20:40–21:20 פנוי — שריון" }).click();
   await dialog.getByRole("button", { name: "שריון", exact: true }).click();
-  await expect(A.page.getByRole("button", { name: "מייבש 1 20:30–21:00 השריון שלי" })).toBeVisible();
+  await expect(A.page.getByRole("button", { name: "מייבש 20:40–21:20 השריון שלי" })).toBeVisible();
 
   // far ahead (5 weeks) is view-only; the month picker jumps back
   for (let i = 0; i < 5; i++) await A.page.getByRole("button", { name: "השבוע הבא" }).click();

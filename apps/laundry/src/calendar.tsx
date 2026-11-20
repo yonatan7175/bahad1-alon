@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, Wind, WashingMachine, Wrench } from "lucide-react";
-import { MACHINES, SLOTS, type Kind, type Machine } from "./machines";
+import { MACHINES, SLOTS, SLOT_MINUTES, type Kind, type Machine } from "./machines";
 import { addDays, israelDay, monthGrid, monthLabel, slotEnd, slotStart, weekDays } from "./time";
 import type { Laundry, Rec } from "./data";
 
-const ROW = 48; // px per 30-minute row (≥ 44px tap target)
+const ROW = 52; // px per 40-minute row (≥ 44px tap target)
 
 export function KindSwitch({ kind, onChange }: { kind: Kind; onChange: (k: Kind) => void }) {
   const opts: { k: Kind; label: string; Icon: typeof Wind; n: number }[] = [
@@ -212,7 +212,7 @@ export function CalendarGrid({
   if (!list) return <div className="skeleton h-[480px]" aria-busy="true" aria-label="טוען את היומן" />;
 
   const minutesFromStart = (now.getTime() - slotStart(day, SLOTS[0]).getTime()) / 60_000;
-  const nowTop = (minutesFromStart / 30) * ROW;
+  const nowTop = (minutesFromStart / SLOT_MINUTES) * ROW;
   const cols = { gridTemplateColumns: `52px repeat(${machines.length}, minmax(0, 1fr))` };
 
   return (
@@ -233,7 +233,7 @@ export function CalendarGrid({
               } ${data.canModerate ? "hover:bg-surface-2" : ""}`}
               aria-label={`${m.label}${b ? " — תקולה" : ""}`}
             >
-              <span className="truncate">{m.label.replace(/^(כביסה|מייבש) /, "")}</span>
+              <span className="truncate">{m.short}</span>
               <span className="text-[10px] font-medium text-muted">{b ? <Wrench className="mx-auto size-3" aria-hidden="true" /> : m.kind === "washer" ? "כביסה" : "מייבש"}</span>
             </button>
           );
@@ -241,16 +241,17 @@ export function CalendarGrid({
       </div>
 
       <div className="relative px-1.5 py-1.5">
-        {isToday && minutesFromStart >= 0 && minutesFromStart <= SLOTS.length * 30 ? (
+        {isToday && minutesFromStart >= 0 && minutesFromStart <= SLOTS.length * SLOT_MINUTES ? (
           <div ref={nowRef} className="pointer-events-none absolute inset-x-1.5 z-10 flex items-center" style={{ top: nowTop + 6 }} aria-hidden="true">
             <span className="rounded-full bg-danger px-1.5 text-[10px] font-bold text-white">עכשיו</span>
             <span className="h-0.5 flex-1 bg-danger/70" />
           </div>
         ) : null}
         {SLOTS.map((time) => {
-          const end = new Date(slotStart(day, time).getTime() + 30 * 60_000);
+          const end = new Date(slotStart(day, time).getTime() + SLOT_MINUTES * 60_000);
           const past = end.getTime() <= now.getTime();
           const fullHour = time.endsWith(":00");
+          const booker = (rec: Rec) => (rec.mine ? "שלי" : rec.owner.name);
           return (
             <div key={time} className="grid gap-1" style={{ ...cols, height: ROW }}>
               <span className={`pt-1 text-center text-[11px] tabular-nums ${fullHour ? "font-bold text-fg" : "text-subtle"}`}>{time}</span>
@@ -265,10 +266,17 @@ export function CalendarGrid({
                       key={m.id}
                       type="button"
                       onClick={() => onBooked(rec)}
-                      aria-label={`${m.label} ${time}–${slotEnd(time)} ${own ? "השריון שלי" : `תפוס ע"י ${rec.owner.name}`}`}
-                      className={`${base} ${own ? "bg-accent text-accent-contrast shadow-[var(--shadow-sm)] hover:bg-accent-hover" : "bg-surface-3 text-muted"} ${past ? "opacity-50" : ""}`}
+                      aria-label={`${m.label} ${time}–${slotEnd(time)} ${own ? "השריון שלי" : `תפוס ע"י ${booker(rec)}${rec.data.phone ? `, ${rec.data.phone}` : ""}`}`}
+                      className={`${base} ${own ? "bg-accent text-accent-contrast shadow-[var(--shadow-sm)] hover:bg-accent-hover" : "bg-surface-3 text-fg"} ${past ? "opacity-50" : ""}`}
                     >
-                      <span className="truncate">{own ? "שלי" : rec.owner.name.split(" ")[0]}</span>
+                      <span className="flex min-w-0 flex-col items-center leading-tight">
+                        <span className="max-w-full truncate">{booker(rec)}</span>
+                        {rec.data.phone ? (
+                          <span className={`max-w-full truncate text-[10px] font-medium tabular-nums ${own ? "opacity-85" : "text-subtle"}`} dir="ltr">
+                            {rec.data.phone}
+                          </span>
+                        ) : null}
+                      </span>
                     </button>
                   );
                 }

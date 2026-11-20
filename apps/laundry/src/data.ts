@@ -7,7 +7,9 @@ import { BahadError, useBahad, type BahadRecord, type Me } from "@/platform/clie
 import { KIND_LABEL, MACHINES, REMINDER_MINUTES, SLOTS, WEEKLY_LIMIT, machineById, type Kind, type Machine } from "./machines";
 import { dayLabel, israelDay, slotEnd, slotIso, slotStart, weekRange } from "./time";
 
-export type Booking = { machine: string; kind: Kind; day: string; time: string; start: string; reminderId?: string };
+/** phone: the booker's, saved with the booking so everyone sees how to reach whoever holds the slot.
+ *  (The name always comes from the server — rec.owner.name — so it can't be faked.) */
+export type Booking = { machine: string; kind: Kind; day: string; time: string; start: string; phone?: string; reminderId?: string };
 export type Rec = BahadRecord<Booking>;
 type Status = { machine: string; broken: boolean; note?: string };
 export type StatusRec = BahadRecord<Status>;
@@ -75,7 +77,10 @@ export function useLaundry() {
   const book = useCallback(
     async (m: Machine, day: string, time: string): Promise<boolean> => {
       try {
-        const rec = await bookings.add({ machine: m.id, kind: m.kind, day, time, start: slotIso(day, time) });
+        const who = me ?? (await bahad.user.me());
+        const data: Booking = { machine: m.id, kind: m.kind, day, time, start: slotIso(day, time) };
+        if (who.phone) data.phone = who.phone;
+        const rec = await bookings.add(data);
         // Reminder 10 minutes before (only arrives if notifications are on in the profile).
         const at = new Date(slotStart(day, time).getTime() - REMINDER_MINUTES * 60_000);
         if (at.getTime() - Date.now() > 60_000) {
@@ -104,7 +109,7 @@ export function useLaundry() {
         return false;
       }
     },
-    [bahad, bookings, loadDay, loadMine, toast],
+    [bahad, me, bookings, loadDay, loadMine, toast],
   );
 
   const cancel = useCallback(

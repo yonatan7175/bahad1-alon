@@ -1,10 +1,11 @@
 "use client";
-// לו"ז מכונות כביסה v2 — calendar of 30-minute slots for 5 washers and 4 dryers.
+// לו"ז מכונות כביסה v3 — calendar of 40-minute slots: washers on floors 1 and 3, one dryer.
+// Every booked slot shows who booked it and their phone.
 // Tabs: יומן (calendar) · שלי (my bookings + weekly quota) · חיפוש (find a free slot).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BellRing, CalendarDays, Eye, ListChecks, Search, Trash2, Wrench } from "lucide-react";
+import { BellRing, CalendarDays, Eye, ListChecks, MessageCircle, Phone, Search, Trash2, Wrench } from "lucide-react";
 import { useBahad } from "@/platform/client";
-import { BOOK_DAYS_AHEAD, KIND_LABEL, MACHINES, REMINDER_MINUTES, WEEKLY_LIMIT, machineById, type Kind, type Machine } from "./machines";
+import { BOOK_DAYS_AHEAD, KIND_LABEL, MACHINES, REMINDER_MINUTES, SLOT_MINUTES, WEEKLY_LIMIT, machineById, type Kind, type Machine } from "./machines";
 import { addDays, dayLabel, israelDay, slotEnd } from "./time";
 import { useLaundry, type Rec } from "./data";
 import { CalendarGrid, KindSwitch, Legend, MonthPicker, WeekNav } from "./calendar";
@@ -189,6 +190,16 @@ export function LaundryApp() {
               </Detail>
             </div>
             <p className="mt-3 flex items-center gap-2 text-xs text-muted">
+              <Phone className="size-4 shrink-0" aria-hidden="true" />
+              {data.me?.phone ? (
+                <span>
+                  השם והטלפון שלך (<span dir="ltr">{data.me.phone}</span>) יוצגו במשבצת לכולם — כדי שיוכלו לתאם איתך.
+                </span>
+              ) : (
+                <span>השם שלך יוצג במשבצת. אין טלפון בפרופיל — כדאי להוסיף כדי שיוכלו לתאם איתך.</span>
+              )}
+            </p>
+            <p className="mt-2 flex items-center gap-2 text-xs text-muted">
               <BellRing className="size-4 shrink-0" aria-hidden="true" />
               תזכורת {REMINDER_MINUTES} דק&apos; לפני — אם ההתראות מופעלות בפרופיל.
             </p>
@@ -224,7 +235,29 @@ export function LaundryApp() {
             {!sheet.rec.mine ? (
               <div className="mt-3">
                 <p className="section-title mb-2">שוריין ע״י</p>
-                <PersonCard id={sheet.rec.owner.id} fallbackName={sheet.rec.owner.name} />
+                {sheet.rec.data.phone ? (
+                  <div className="rounded-card border border-line bg-bg-elevated p-4" data-testid="booker-card">
+                    <p className="text-lg font-extrabold">{sheet.rec.owner.name}</p>
+                    <p className="mt-0.5 text-base font-bold tabular-nums text-muted" dir="ltr">
+                      {sheet.rec.data.phone}
+                    </p>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <a href={`tel:${sheet.rec.data.phone.replace(/[^\d+]/g, "")}`} className="btn-secondary min-h-11">
+                        <Phone className="size-4 text-accent" aria-hidden="true" /> חיוג
+                      </a>
+                      <a
+                        href={`https://wa.me/972${sheet.rec.data.phone.replace(/\D/g, "").replace(/^0/, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-secondary min-h-11"
+                      >
+                        <MessageCircle className="size-4 text-accent" aria-hidden="true" /> וואטסאפ
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <PersonCard id={sheet.rec.owner.id} fallbackName={sheet.rec.owner.name} />
+                )}
               </div>
             ) : null}
             {sheet.rec.mine || data.canModerate ? (
@@ -297,7 +330,7 @@ export function LaundryApp() {
         ) : null}
       </Sheet>
       <p className="mt-6 text-center text-xs text-subtle">
-        {MACHINES.filter((m) => m.kind === "washer").length} מכונות כביסה · {MACHINES.filter((m) => m.kind === "dryer").length} מייבשים · משבצות של חצי שעה ·
+        {MACHINES.filter((m) => m.kind === "washer").length} מכונות כביסה (קומה 1, קומה 3) · מייבש אחד · משבצות של {SLOT_MINUTES} דקות ·
         עד {WEEKLY_LIMIT} כביסות ו-{WEEKLY_LIMIT} ייבושים לשבוע
       </p>
       <span className="sr-only">{israelDay(now)}</span>

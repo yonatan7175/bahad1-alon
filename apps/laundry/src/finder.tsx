@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { Moon, Sun, Sunrise, Sunset, Clock, TriangleAlert, Zap } from "lucide-react";
-import { BOOK_DAYS_AHEAD, KIND_LABEL, MACHINES, SLOTS, TIME_OF_DAY, WEEKLY_LIMIT, type Kind, type Machine } from "./machines";
+import { BOOK_DAYS_AHEAD, KIND_LABEL, MACHINES, SLOTS, SLOT_MINUTES, TIME_OF_DAY, WEEKLY_LIMIT, type Kind, type Machine } from "./machines";
 import { addDays, dayLabel, slotEnd, slotStart } from "./time";
 import { KindSwitch } from "./calendar";
 import type { Laundry } from "./data";
@@ -24,7 +24,7 @@ export function findFree(data: Pick<Laundry, "byDay" | "broken">, days: string[]
     for (const time of SLOTS) {
       const h = Number(time.slice(0, 2));
       if (h < tod.from || h >= tod.to) continue;
-      if (slotStart(day, time).getTime() + 30 * 60_000 <= now.getTime()) continue;
+      if (slotStart(day, time).getTime() + SLOT_MINUTES * 60_000 <= now.getTime()) continue;
       const free = machines.filter((m) => !taken.has(`${m.id}|${time}`));
       if (free.length) out.push({ day, time, free });
     }
@@ -142,7 +142,7 @@ export function Finder({
                     <span className="block truncate font-semibold">
                       {r.free.length === 1 ? r.free[0].label : `${r.free.length} מכונות פנויות`}
                     </span>
-                    <span className="block truncate text-xs text-muted">מס׳ {r.free.map((m) => m.label.split(" ")[1]).join(" · ")}</span>
+                    <span className="block truncate text-xs text-muted">{r.free.map((m) => m.short).join(" · ")}</span>
                   </span>
                   <span className="btn min-h-9 px-3 text-sm">שריון</span>
                 </button>

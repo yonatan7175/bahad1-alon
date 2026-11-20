@@ -1,6 +1,6 @@
 "use client";
 import { CalendarClock, Search, Wind, WashingMachine } from "lucide-react";
-import { KIND_LABEL, WEEKLY_LIMIT, machineById, type Kind } from "./machines";
+import { KIND_LABEL, SLOT_MINUTES, WEEKLY_LIMIT, machineById, type Kind } from "./machines";
 import { dayLabel, relativeFromNow, slotEnd, slotStart, weekRange } from "./time";
 import type { Laundry, Rec } from "./data";
 
@@ -44,7 +44,7 @@ export function MyBookings({
   const [from, to] = weekRange(today);
   const nextWeekDay = new Date(Date.parse(to) + 86400_000).toISOString().slice(0, 10);
   const sorted = [...data.mine].sort((a, b) => (a.data.day + a.data.time).localeCompare(b.data.day + b.data.time));
-  const upcoming = sorted.filter((r) => slotStart(r.data.day, r.data.time).getTime() + 30 * 60_000 > now.getTime());
+  const upcoming = sorted.filter((r) => slotStart(r.data.day, r.data.time).getTime() + SLOT_MINUTES * 60_000 > now.getTime());
   const hasNextWeek = upcoming.some((r) => r.data.day > to);
 
   return (

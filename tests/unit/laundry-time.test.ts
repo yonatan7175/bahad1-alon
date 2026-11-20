@@ -36,7 +36,9 @@ describe("laundry Israel-time helpers", () => {
 
 import { relativeFromNow, slotEnd, slotIso, slotStart, weekRange } from "@apps/laundry/src/time";
 
-describe("laundry 30-minute slot helpers", () => {
+import { SLOTS } from "@apps/laundry/src/machines";
+
+describe("laundry 40-minute slot helpers", () => {
   it("slotStart / slotIso handle half hours and DST", () => {
     expect(slotStart("2026-11-20", "18:30").toISOString()).toBe("2026-11-20T16:30:00.000Z");
     expect(slotIso("2026-11-20", "18:30")).toBe("2026-11-20T18:30:00+02:00");
@@ -44,9 +46,16 @@ describe("laundry 30-minute slot helpers", () => {
     expect(new Date(slotIso("2026-07-01", "23:30")).getTime()).toBe(slotStart("2026-07-01", "23:30").getTime());
   });
   it("slotEnd", () => {
-    expect(slotEnd("18:00")).toBe("18:30");
-    expect(slotEnd("18:30")).toBe("19:00");
-    expect(slotEnd("23:30")).toBe("00:00");
+    expect(slotEnd("18:00")).toBe("18:40");
+    expect(slotEnd("18:40")).toBe("19:20");
+    expect(slotEnd("23:20")).toBe("00:00");
+  });
+  it("40-minute slots from 06:00 to midnight", () => {
+    expect(SLOTS[0]).toBe("06:00");
+    expect(SLOTS.slice(1, 4)).toEqual(["06:40", "07:20", "08:00"]);
+    expect(SLOTS.at(-1)).toBe("23:20");
+    expect(SLOTS).toHaveLength(27);
+    for (const t of SLOTS) expect(t).toMatch(/^([01]\d|2[0-3]):(00|20|40)$/);
   });
   it("weekRange is Sunday–Saturday", () => {
     expect(weekRange("2026-11-22")).toEqual(["2026-11-22", "2026-11-28"]); // Sunday

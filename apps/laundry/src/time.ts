@@ -1,4 +1,6 @@
 // Israel-time helpers (Asia/Jerusalem, with daylight saving), independent of the phone's timezone.
+import { SLOT_MINUTES } from "./machines";
+
 const TZ = "Asia/Jerusalem";
 
 /** Offset of Israel from UTC at `date`, in minutes (120 in winter, 180 in summer). */
@@ -72,10 +74,10 @@ export function slotIso(day: string, time: string): string {
   return israelIso(day, h).replace(/T(\d{2}):00:00/, `T$1:${String(m).padStart(2, "0")}:00`);
 }
 
-/** "HH:MM" + 30 minutes. */
+/** "HH:MM" + one slot (40 minutes). */
 export function slotEnd(time: string): string {
   const [h, m] = time.split(":").map(Number);
-  const t = h * 60 + m + 30;
+  const t = h * 60 + m + SLOT_MINUTES;
   return `${String(Math.floor(t / 60) % 24).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
 }
 
