@@ -34,9 +34,9 @@ export async function PortalHeader({ session }: { session: Session }) {
           </Link>
           <MainNav canAdmin={canAdmin} pending={pending} feedback={feedback} />
           <div className="flex items-center gap-1.5">
-          <Link href="/install" className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-xs font-bold text-accent-ink shadow-[var(--shadow-sm)] hover:bg-surface-2" aria-label="הוספה למסך הבית">
+          <Link href="/install" className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-xs font-bold text-accent-ink shadow-[var(--shadow-sm)] hover:bg-surface-2" aria-label="הוספה כאפליקציה">
             <MonitorSmartphone className="size-4" aria-hidden="true" />
-            <span className="hidden min-[400px]:inline">למסך הבית</span>
+            <span className="hidden min-[400px]:inline">הוספה כאפליקציה</span>
           </Link>
           <UserMenu
             user={{

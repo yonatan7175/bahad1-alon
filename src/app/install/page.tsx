@@ -5,7 +5,7 @@ import { PortalHeader } from "@/components/portal-header";
 import { Z1Seal } from "@/components/brand";
 import { InstallTabs } from "./tabs";
 
-export const metadata: Metadata = { title: "הוספה למסך הבית" };
+export const metadata: Metadata = { title: "הוספה כאפליקציה" };
 
 function Step({ n, children }: { n: number; children: React.ReactNode }) {
   return (
@@ -28,7 +28,7 @@ export default async function InstallPage() {
         <header className="hero flex items-center gap-4 rounded-[24px] p-5 shadow-lift sm:p-7">
           <Z1Seal size={64} />
           <div>
-            <h1 className="text-2xl font-black">צ1 על מסך הבית</h1>
+            <h1 className="text-2xl font-black">הוספת צ1 כאפליקציה</h1>
             <p className="mt-1 text-sm opacity-90">אייקון אחד בטלפון — נפתח כמו אפליקציה, בלי לחפש קישור.</p>
           </div>
         </header>
