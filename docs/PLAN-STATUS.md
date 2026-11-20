@@ -10,7 +10,7 @@ Built on 2026-11-17 from [`plan.md`](../plan.md). Legend: ✅ done and tested ·
 |---|---|
 | Next.js 16 + TS + Tailwind 4, RTL, Heebo (self-hosted), light/dark + manual toggle, design tokens | ✅ |
 | Migrations for the data model, RLS on every table | ✅ tested on embedded Postgres (RLS, trigger, unit checks) and over the real `pg` driver |
-| Google sign-in → onboarding → pending → approval → home; route guards | ✅ flow tested in mock mode · 🟡 real Google login needs Supabase + Google setup |
+| Google sign-in → onboarding → home (open registration; `BAHAD_REQUIRE_APPROVAL=1` = pending → approval); route guards | ✅ flow tested in mock mode · 🟡 real Google login needs Supabase + Google setup |
 | `/admin` (users, units, apps kill switch, audit log), `/profile` | ✅ |
 | CI: typecheck, lint, build, tests, e2e; Vercel previews; branch protection | ✅ workflows written · ⬜ enable on GitHub/Vercel |
 | `CLAUDE.md`, `README.md` | ✅ |

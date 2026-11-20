@@ -5,7 +5,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { getAuthUser, type AuthUser } from "./index";
 import { getDb } from "../server/db";
-import { adminEmails, authShim } from "../server/config";
+import { adminEmails, authShim, requireApproval } from "../server/config";
 import { loadProfile, type ProfileRow } from "../server/engine";
 import { audit } from "../server/audit";
 
@@ -52,6 +52,13 @@ export const getSession = cache(async (): Promise<Session | null> => {
       [auth.id],
     );
     await audit(db, auth.id, "user.bootstrap_admin", auth.id, { email: auth.email });
+    profile = (await loadFull(auth.id))!;
+  }
+  // Open registration (default): whoever finished registering is approved — including users who
+  // registered while approval was still required. Blocked users stay blocked.
+  if (profile.status === "pending" && profile.onboarded_at && !requireApproval()) {
+    await db.query("update public.profiles set status = 'approved', approved_at = coalesce(approved_at, now()) where id = $1 and status = 'pending'", [auth.id]);
+    await audit(db, null, "user.auto_approve", auth.id, { email: auth.email });
     profile = (await loadFull(auth.id))!;
   }
   return { auth, profile };

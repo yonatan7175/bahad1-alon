@@ -11,6 +11,7 @@ import { FloorMap, Legend } from "./map";
 import { ManagerDashboard } from "./manager";
 import { QuickReport, RoomDetails, DailyConfirm } from "./room-panel";
 import { Sheet } from "./sheet";
+import { RoomNotes } from "./notes";
 
 type Tab = "room" | "map" | "manage";
 
@@ -93,6 +94,7 @@ export function DormApp() {
               </span>
             </header>
             <DailyConfirm d={d} room={myRoom} isMine />
+            <RoomNotes room={myRoom} canEdit />
             <section className="card p-4">
               <h2 className="text-lg font-extrabold">מה חסר? דיווח בשתי לחיצות</h2>
               <p className="mb-3 text-xs text-muted">כבר דיווחו מהחדר? תראו את זה כאן ותוכלו לסמן +1 במקום לפתוח פנייה כפולה.</p>

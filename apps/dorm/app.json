@@ -1,7 +1,7 @@
 {
   "slug": "dorm",
   "name": "מגורים",
-  "description": "דיווח חוסרים ותקלות בחדרים (נייר, שקיות, דלי, מגב, מנורה, הסקה), מפת המגורים ולוח בקרה לקל\"ג",
+  "description": "דיווח חוסרים ותקלות בחדרים (מהרשימה או בכתיבה חופשית), הערות מסדר, מפת המגורים ולוח בקרה לקל\"ג",
   "tier": "full",
   "icon": "icon.svg",
   "tags": [
@@ -123,6 +123,7 @@
               "trash_bags",
               "bucket",
               "mop",
+              "other_missing",
               "lamp",
               "heating",
               "other"
@@ -163,7 +164,10 @@
             "if": {
               "properties": {
                 "item": {
-                  "const": "other"
+                  "enum": [
+                    "other",
+                    "other_missing"
+                  ]
                 }
               }
             },
@@ -298,8 +302,95 @@
             "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
           }
         }
+      },
+      "ownRoom": "room"
+    },
+    "notes": {
+      "read": "all",
+      "create": "any",
+      "moderate": "admin",
+      "ownRoom": "room",
+      "schema": {
+        "type": "object",
+        "required": [
+          "room",
+          "text"
+        ],
+        "additionalProperties": false,
+        "description": "Notes from the last inspection (מסדר). Every edit adds a new version; the newest one is shown.",
+        "properties": {
+          "room": {
+            "type": "string",
+            "enum": [
+              "237",
+              "238",
+              "239",
+              "240",
+              "241",
+              "242",
+              "243",
+              "244",
+              "245",
+              "246",
+              "247",
+              "248",
+              "249",
+              "250",
+              "251",
+              "252",
+              "253",
+              "254",
+              "255",
+              "256",
+              "337",
+              "338",
+              "339",
+              "340",
+              "341",
+              "342",
+              "343",
+              "344",
+              "345",
+              "346",
+              "347",
+              "348",
+              "349",
+              "350",
+              "351",
+              "352",
+              "353",
+              "354",
+              "355",
+              "356",
+              "437",
+              "438",
+              "439",
+              "440",
+              "441",
+              "442",
+              "443",
+              "444",
+              "445",
+              "446",
+              "447",
+              "448",
+              "449",
+              "450",
+              "451",
+              "452",
+              "453",
+              "454",
+              "455",
+              "456"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 600
+          }
+        }
       }
     }
   },
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

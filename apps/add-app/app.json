@@ -1,0 +1,23 @@
+{
+  "slug": "add-app",
+  "name": "הוספת אפליקציה",
+  "description": "הצעת אתר חדש לפורטל (קישור) או מאגר GitHub — נכנס אחרי אישור מנהל",
+  "tier": "full",
+  "icon": "icon.svg",
+  "tags": [
+    "כלים"
+  ],
+  "authors": [
+    "REPLACE-ME"
+  ],
+  "status": "live",
+  "audience": [
+    "cadet",
+    "commander",
+    "admin"
+  ],
+  "scopes": [
+    "profile"
+  ],
+  "version": "1.0.0"
+}

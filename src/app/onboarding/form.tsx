@@ -13,8 +13,11 @@ interface Unit {
 export function OnboardingForm({
   companies,
   initial,
+  approval,
 }: {
   companies: Unit[];
+  /** BAHAD_REQUIRE_APPROVAL: an admin still has to approve after this form. */
+  approval: boolean;
   initial: { name: string; room: string; company: string; team: string; phone: string };
 }) {
   const [state, action, pending] = useActionState<OnboardingState, FormData>(saveOnboarding, {});
@@ -116,7 +119,7 @@ export function OnboardingForm({
         </p>
       ) : null}
       <button type="submit" className="btn mt-6 h-12 w-full" disabled={pending}>
-        {pending ? "שומר…" : "שליחה לאישור"}
+        {pending ? "שומר…" : approval ? "שליחה לאישור" : "סיום הרשמה וכניסה"}
       </button>
     </form>
   );

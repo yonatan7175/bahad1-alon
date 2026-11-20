@@ -8,7 +8,7 @@ import { MAX_RECORDS_PER_USER, type CollectionRule, type RegistryApp, type Scope
 import type { BahadRecord, JsonObject, Me, NotifyResult, Role } from "../types";
 import type { Db } from "./db-core";
 import { canUseApp, effectiveStatus, getApp, loadOverride } from "./registry";
-import { canCreate, canRead, canWrite, readVisibilitySql, type Actor } from "./rules";
+import { canCreate, canRead, canWrite, moderationScope, readVisibilitySql, type Actor } from "./rules";
 import { getPerson } from "./directory";
 
 import { LIMITS } from "../limits";
@@ -321,6 +321,14 @@ function enforceWindow(rule: CollectionRule, data: JsonObject) {
   if (day > addDays(today, w.maxDaysAhead)) throw new BahadError("invalid", `too far ahead (at most ${w.maxDaysAhead} days)`);
 }
 
+/** rule.ownRoom: the record must be about the writer's own room (moderators: any room). */
+function enforceOwnRoom(ctx: Ctx, rule: CollectionRule, data: JsonObject) {
+  if (!rule.ownRoom || moderationScope(ctx.actor, rule) === "all") return;
+  if (!ctx.profile.room || data[rule.ownRoom] !== ctx.profile.room) {
+    throw new BahadError("forbidden", `"${rule.ownRoom}" must be your own room`);
+  }
+}
+
 async function enforceConstraints(t: Db, ctx: Ctx, name: string, rule: CollectionRule, data: JsonObject, ownerId: string, excludeId: string | null) {
   enforceWindow(rule, data);
   if (rule.unique) {
@@ -361,6 +369,7 @@ async function dataAdd(deps: EngineDeps, ctx: Ctx, p: Record<string, unknown>) {
   if (!canCreate(ctx.actor, rule)) throw new BahadError("forbidden", "you may not add records to this collection");
   const data = toJsonObject(p.data, "data");
   validateSchema(ctx, name, rule, data);
+  enforceOwnRoom(ctx, rule, data);
   await hit(ctx.db, `w:${ctx.app.slug}:${ctx.actor.id}`, "minute", LIMITS.writesPerMinute, "too many writes, try again in a minute");
   const max = rule.maxPerUser ?? MAX_RECORDS_PER_USER;
   const row = await ctx.db.tx(async (t) => {
@@ -432,6 +441,7 @@ async function dataUpdate(deps: EngineDeps, ctx: Ctx, p: Record<string, unknown>
     if (!canWrite(ctx.actor, rule, ownerInfo(cur))) throw new BahadError("forbidden", "you may not change this record");
     const merged = toJsonObject({ ...cur.data, ...patch }, "data");
     validateSchema(ctx, name, rule, merged);
+    enforceOwnRoom(ctx, rule, merged);
     if (rule.unique || rule.quota || rule.window) {
       await t.query("select pg_advisory_xact_lock(hashtext($1))", [`${ctx.app.slug}/${name}/${cur.owner_id}`]);
       await enforceConstraints(t, ctx, name, rule, merged, cur.owner_id, id);

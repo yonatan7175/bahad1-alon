@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { getSession } from "@/platform/auth/session";
 import { getDb } from "@/platform/server/db";
+import { requireApproval } from "@/platform/server/config";
 import { AuthShell } from "@/components/auth-shell";
 import { OnboardingForm } from "./form";
 
@@ -18,12 +19,13 @@ export default async function Onboarding() {
   return (
     <AuthShell step={2}>
       <h1 className="text-2xl font-extrabold">נעים להכיר 👋</h1>
-      <p className="mt-1 text-muted">כמה פרטים קצרים, ואז מנהל יאשר את הכניסה שלך.</p>
+      <p className="mt-1 text-muted">{requireApproval() ? "כמה פרטים קצרים, ואז מנהל יאשר את הכניסה שלך." : "כמה פרטים קצרים — ונכנסים."}</p>
       {companies.length === 0 ? (
         <p className="mt-5 rounded-ctl bg-surface-2 p-4 text-sm">עדיין לא הוגדרו פלוגות באתר. נסו שוב מאוחר יותר או פנו למנהל.</p>
       ) : (
         <OnboardingForm
           companies={companies}
+          approval={requireApproval()}
           initial={{
             name: s.profile.full_name ?? "",
             room: s.profile.room ?? "",

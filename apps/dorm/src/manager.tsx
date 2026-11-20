@@ -52,8 +52,8 @@ export function ManagerDashboard({ d, onOpenRoom }: { d: Dorm; onOpenRoom: (room
   };
   const copy = async () => {
     const lines = [`רשימת חלוקה — ${new Intl.DateTimeFormat("he-IL", { timeZone: "Asia/Jerusalem", dateStyle: "short" }).format(new Date())}`];
-    for (const { item, list } of distribution) lines.push(`${item.emoji} ${item.label} (${list.length}): ${list.map((t) => areaById(t.data.room)?.short).join(", ")}`);
-    if (faults.length) lines.push(`🛠️ תקלות (${faults.length}): ${faults.map((t) => `${areaById(t.data.room)?.short} ${itemById(t.data.item)?.short}`).join(", ")}`);
+    for (const { item, list } of distribution) lines.push(`${item.emoji} ${item.label} (${list.length}): ${list.map((t) => `${areaById(t.data.room)?.short}${item.needsNote && t.data.note ? ` (${t.data.note})` : ""}`).join(", ")}`);
+    if (faults.length) lines.push(`🛠️ תקלות (${faults.length}): ${faults.map((t) => `${areaById(t.data.room)?.short} ${itemById(t.data.item)?.needsNote && t.data.note ? t.data.note : itemById(t.data.item)?.short}`).join(", ")}`);
     try {
       await navigator.clipboard.writeText(lines.join("\n"));
       setCopied(true);
@@ -117,6 +117,7 @@ export function ManagerDashboard({ d, onOpenRoom }: { d: Dorm; onOpenRoom: (room
                       className="min-h-9 rounded-full border border-line bg-surface-2 px-3 text-sm font-bold tabular-nums hover:border-accent"
                     >
                       {areaById(t.data.room)?.short}
+                      {item.needsNote && t.data.note ? <span className="ms-1 font-medium text-muted">· {t.data.note.length > 28 ? `${t.data.note.slice(0, 28)}…` : t.data.note}</span> : null}
                       {(d.plusBy.get(t.id) ?? []).length ? <span className="ms-1 text-xs text-gold">+{(d.plusBy.get(t.id) ?? []).length}</span> : null}
                     </button>
                   ))}

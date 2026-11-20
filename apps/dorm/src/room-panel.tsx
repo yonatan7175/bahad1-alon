@@ -6,6 +6,7 @@ import { areaById } from "./building";
 import { GROUP_LABEL, ITEMS, type Group, type Item } from "./items";
 import { hhmm, type Dorm } from "./data";
 import { TicketCard } from "./ticket-card";
+import { RoomNotes } from "./notes";
 
 export function DailyConfirm({ d, room, isMine }: { d: Dorm; room: string; isMine: boolean }) {
   const check = d.checkByRoom.get(room);
@@ -106,7 +107,7 @@ export function QuickReport({ d, room }: { d: Dorm; room: string }) {
             }}
           >
             <label className="label" htmlFor="note">
-              {pick.needsNote ? "מה התקלה?" : "הערה (לא חובה)"}
+              {pick.needsNote ? (pick.group === "fault" ? "מה התקלה? כתבו בחופשיות" : "מה חסר? כתבו בחופשיות") : "הערה (לא חובה)"}
             </label>
             <textarea
               id="note"
@@ -114,7 +115,7 @@ export function QuickReport({ d, room }: { d: Dorm; room: string }) {
               maxLength={200}
               required={pick.needsNote}
               minLength={pick.needsNote ? 2 : undefined}
-              placeholder={pick.needsNote ? "למשל: הברז בכיור דולף" : pick.group === "fault" ? "למשל: המנורה ליד החלון" : "למשל: נגמר לגמרי"}
+              placeholder={pick.needsNote ? (pick.group === "fault" ? "למשל: הברז בכיור דולף, הדלת לא ננעלת" : "למשל: סבון ידיים, מטאטא, כיסוי למזרן") : pick.group === "fault" ? "למשל: המנורה ליד החלון" : "למשל: נגמר לגמרי"}
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
@@ -185,7 +186,12 @@ export function RoomDetails({ d, room, isMine, hideConfirm = false }: { d: Dorm;
   const area = areaById(room);
   return (
     <div className="space-y-4">
-      {area?.kind === "room" && !hideConfirm ? <DailyConfirm d={d} room={room} isMine={isMine} /> : null}
+      {area?.kind === "room" && !hideConfirm ? (
+        <>
+          <DailyConfirm d={d} room={room} isMine={isMine} />
+          <RoomNotes room={room} canEdit={isMine || d.isManager} />
+        </>
+      ) : null}
       <div>
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="section-title">פניות פתוחות ({open.length})</p>

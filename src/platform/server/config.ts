@@ -70,6 +70,11 @@ export function adminEmails(): string[] {
 }
 
 /** Q3 in the plan: may commanders approve new users from their own company? */
+/** 1 = new users wait for an admin after registering (the old flow). Default: registering creates an approved account. */
+export function requireApproval(): boolean {
+  return env("BAHAD_REQUIRE_APPROVAL") === "1";
+}
+
 export function commandersCanApprove(): boolean {
   return env("BAHAD_COMMANDERS_CAN_APPROVE") === "1";
 }

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, Search, SearchX, Sparkles, X } from "lucide-react";
+import { ExternalLink, LayoutGrid, Search, SearchX, Sparkles, X } from "lucide-react";
 import { matchesQuery } from "@/lib/hebrew";
 import { SchoolBadge } from "./brand";
 
@@ -13,6 +13,8 @@ export interface GridApp {
   tags: string[];
   iconUrl: string;
   status: "live" | "beta" | "hidden" | "disabled";
+  /** An admin-approved outside website ("הוספת אפליקציה"): opens in a new tab, no Platform API. */
+  link?: { url: string; emoji: string };
 }
 
 function greeting(h: number) {
@@ -167,12 +169,33 @@ export function AppGrid({
   );
 }
 
+const CARD =
+  "group relative flex h-full flex-col rounded-card border border-line bg-surface p-4 shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-lift active:scale-[0.98]";
+
 function AppCard({ app }: { app: GridApp }) {
+  if (app.link) {
+    return (
+      <a href={app.link.url} target="_blank" rel="noopener noreferrer" className={CARD} aria-label={`${app.name} (אתר חיצוני, נפתח בלשונית חדשה)`}>
+        <span className="flex items-start justify-between gap-2">
+          <span className="flex size-[52px] items-center justify-center rounded-2xl bg-surface-2 text-[28px] shadow-[var(--shadow-sm)]" aria-hidden="true">
+            {app.link.emoji}
+          </span>
+          <ExternalLink className="size-4 text-muted" aria-hidden="true" />
+        </span>
+        <span className="mt-3 line-clamp-2 text-[15px] font-bold leading-snug">{app.name}</span>
+        <span className="mt-1 line-clamp-2 text-[13px] leading-snug text-muted">{app.description || new URL(app.link.url).hostname}</span>
+        <span className="mt-auto flex flex-wrap gap-1 pt-3">
+          {app.tags.map((t) => (
+            <span key={t} className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-muted">
+              {t}
+            </span>
+          ))}
+        </span>
+      </a>
+    );
+  }
   return (
-    <Link
-      href={`/a/${app.slug}`}
-      className="group relative flex h-full flex-col rounded-card border border-line bg-surface p-4 shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-lift active:scale-[0.98]"
-    >
+    <Link href={`/a/${app.slug}`} className={CARD}>
       <span className="flex items-start justify-between gap-2">
         {/* eslint-disable-next-line @next/next/no-img-element -- static SVG/PNG icon from the app folder */}
         <img src={app.iconUrl} alt="" width={52} height={52} className="size-[52px] rounded-2xl shadow-[var(--shadow-sm)]" loading="lazy" />

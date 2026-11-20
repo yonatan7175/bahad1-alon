@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ChevronLeft, UserRoundCheck } from "lucide-react";
+import { AppWindow, ChevronLeft, UserRoundCheck } from "lucide-react";
 import { requireApproved } from "@/platform/auth/session";
 import { getDb } from "@/platform/server/db";
 import { allTags, loadOverrides, visibleApps } from "@/platform/server/registry";
-import { commandersCanApprove } from "@/platform/server/config";
+import { commandersCanApprove, requireApproval } from "@/platform/server/config";
 import { PortalHeader } from "@/components/portal-header";
 import { AppGrid, type GridApp } from "@/components/app-grid";
+import { approvedLinkApps, pendingSubmissionCount } from "@/platform/server/submissions";
 
 export default async function Home(props: PageProps<"/">) {
   const session = await requireApproved("/");
@@ -20,11 +21,15 @@ export default async function Home(props: PageProps<"/">) {
     iconUrl: app.iconUrl,
     status,
   }));
+  // Websites approved through "הוספת אפליקציה" — link tiles that open in a new tab.
+  for (const l of await approvedLinkApps(db)) {
+    apps.push({ slug: `link-${l.id}`, name: l.name, description: l.description, tags: ["קישורים"], iconUrl: "", status: "live", link: { url: l.url, emoji: l.emoji } });
+  }
   const tags = allTags()
     .map((t) => ({ name: t, count: apps.filter((a) => a.tags.includes(t)).length }))
     .filter((t) => t.count > 0);
 
-  const canApprove = profile.role === "admin" || (profile.role === "commander" && commandersCanApprove() && !!profile.company_id);
+  const canApprove = requireApproval() && (profile.role === "admin" || (profile.role === "commander" && commandersCanApprove() && !!profile.company_id));
   let pending = 0;
   if (canApprove) {
     const { rows } = await db.query<{ n: number }>(
@@ -33,6 +38,7 @@ export default async function Home(props: PageProps<"/">) {
     );
     pending = rows[0]?.n ?? 0;
   }
+  const pendingApps = profile.role === "admin" ? await pendingSubmissionCount(db) : 0;
 
   return (
     <>
@@ -49,6 +55,18 @@ export default async function Home(props: PageProps<"/">) {
             <span className="flex-1">
               {pending === 1 ? "משתמש חדש ממתין לאישור שלך" : `${pending} משתמשים חדשים ממתינים לאישור שלך`}
             </span>
+            <ChevronLeft className="size-5 text-muted" aria-hidden="true" />
+          </Link>
+        ) : null}
+        {pendingApps > 0 ? (
+          <Link
+            href="/a/add-app"
+            className="mb-4 flex animate-rise items-center gap-3 rounded-card border border-accent/30 bg-accent-soft px-4 py-3 text-sm font-semibold text-fg shadow-[var(--shadow-sm)] transition-colors hover:border-accent/60"
+          >
+            <span className="flex size-9 items-center justify-center rounded-full bg-accent text-white">
+              <AppWindow className="size-5" aria-hidden="true" />
+            </span>
+            <span className="flex-1">{pendingApps === 1 ? "הצעה לאפליקציה חדשה ממתינה לאישור שלך" : `${pendingApps} הצעות לאפליקציות ממתינות לאישור שלך`}</span>
             <ChevronLeft className="size-5 text-muted" aria-hidden="true" />
           </Link>
         ) : null}

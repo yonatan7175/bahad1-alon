@@ -79,6 +79,12 @@ export const collectionRuleSchema = z.strictObject({
     })
     .optional()
     .describe('Records must be dated (Israel time) between today and today + maxDaysAhead (past allowed only with allowPast)'),
+  ownRoom: z
+    .string()
+    .min(1)
+    .max(64)
+    .optional()
+    .describe('Top-level key that must equal the writer\'s own room (profile) on every add/update — unless they moderate the collection. Needs scope "unit"'),
 });
 
 export const manifestSchema = z
@@ -126,6 +132,11 @@ export const manifestSchema = z
       }
     } else if (m.url) {
       ctx.addIssue({ code: "custom", path: ["url"], message: 'only tier "external" may have a "url"' });
+    }
+    for (const [name, c] of Object.entries(m.collections)) {
+      if (c.ownRoom && !m.scopes.includes("unit")) {
+        ctx.addIssue({ code: "custom", path: ["collections", name, "ownRoom"], message: '"ownRoom" needs scope "unit"' });
+      }
     }
     if (m.scopes.includes("data") && Object.keys(m.collections).length === 0) {
       ctx.addIssue({

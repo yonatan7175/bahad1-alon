@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { CircleAlert, FlaskConical, LockKeyhole, UserPlus } from "lucide-react";
 import { getSession, safeNext } from "@/platform/auth/session";
-import { authMode } from "@/platform/server/config";
+import { authMode, requireApproval } from "@/platform/server/config";
 import { ROLE_LABEL, STATUS_LABEL } from "@/lib/site";
 import { AuthShell } from "@/components/auth-shell";
 import { Avatar } from "@/components/avatar";
@@ -21,7 +21,7 @@ export default async function SignIn(props: PageProps<"/signin">) {
   return (
     <AuthShell>
       <h1 className="text-center text-2xl font-extrabold">ברוכים הבאים</h1>
-      <p className="mt-2 text-center text-muted">כל הכלים של הגדוד במקום אחד. מתחברים עם Google, ומנהל מאשר את הכניסה.</p>
+      <p className="mt-2 text-center text-muted">כל הכלים של הגדוד במקום אחד. מתחברים עם Google{requireApproval() ? ", ומנהל מאשר את הכניסה" : ""}.</p>
       {sp.error ? (
         <p className="mt-4 flex items-center gap-2 rounded-ctl bg-danger-soft p-3 text-sm text-danger">
           <CircleAlert className="size-4 shrink-0" aria-hidden="true" /> ההתחברות נכשלה. נסו שוב.

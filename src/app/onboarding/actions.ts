@@ -2,6 +2,8 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/platform/auth/session";
 import { getDb } from "@/platform/server/db";
+import { audit } from "@/platform/server/audit";
+import { requireApproval } from "@/platform/server/config";
 import { normalizePhone, normalizeRoom, teamPlatoonName, validHebrewName } from "@/lib/validate";
 
 export interface OnboardingState {
@@ -35,5 +37,12 @@ export async function saveOnboarding(_prev: OnboardingState, form: FormData): Pr
       where id = $1 and status = 'pending'`,
     [s.profile.id, name, companyId, rows[0].id, phone, room],
   );
-  redirect("/pending");
+  if (requireApproval()) redirect("/pending");
+  // Open registration: the account is created (approved) right away.
+  const done = await db.query(
+    "update public.profiles set status = 'approved', approved_at = now() where id = $1 and status = 'pending' returning id",
+    [s.profile.id],
+  );
+  if (done.rows.length) await audit(db, null, "user.auto_approve", s.profile.id, { email: s.profile.email });
+  redirect("/");
 }

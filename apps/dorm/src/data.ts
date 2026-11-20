@@ -46,11 +46,13 @@ export function useDorm() {
   const toast = useCallback((m: string) => bahad.ui.toast(m), [bahad]);
 
   const loadTickets = useCallback(async () => {
-    const [o, c] = await Promise.all([
-      tickets.list({ where: { slot: "open" }, order: "createdAt:asc", limit: 200 }),
+    // By status, not slot: free-text items ("repeatable") stay open under their own uuid slot.
+    const [o, p, c] = await Promise.all([
+      tickets.list({ where: { status: "open" }, order: "createdAt:asc", limit: 200 }),
+      tickets.list({ where: { status: "in_progress" }, order: "createdAt:asc", limit: 200 }),
       tickets.list({ where: { status: "closed" }, order: "updatedAt:desc", limit: 150 }),
     ]);
-    setOpen(o.filter(valid));
+    setOpen([...o, ...p].filter(valid).sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
     setClosed(c.filter(valid));
   }, [tickets]);
   const loadPlus = useCallback(async () => setPluses(await plus.list({ limit: 200 })), [plus]);
