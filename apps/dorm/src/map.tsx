@@ -1,13 +1,13 @@
 "use client";
 // Live floor map. Phone-first: the two corridors run top→bottom, so 20 rooms fit 360 px
-// with big tap targets. RTL: odd side on the right, even side on the left, x37 faces x38.
+// with big tap targets. RTL: even side on the right, odd side on the left, x38 faces x37.
 //
 //            שירותים (צד 37/38)
-//   x37 ┃ odd ┃  inner   ┃ even ┃ x38
+//   x38 ┃even ┃  inner   ┃ odd  ┃ x37
 //   …   ┃corr.┃  area    ┃corr. ┃ …
-//   x45 ┃     ┃          ┃      ┃ x46
+//   x46 ┃     ┃          ┃      ┃ x45
 //            לובי / מדרגות
-//   x47 ┃     ┃          ┃      ┃ x48
+//   x48 ┃     ┃          ┃      ┃ x47
 //   …                             …
 //            שירותים (צד 55/56)
 import { CheckCircle2, DoorOpen, House } from "lucide-react";
@@ -101,7 +101,7 @@ export function FloorMap({ d, floor, myRoom, onOpen }: { d: Dorm; floor: Floor; 
   const block = (h: 0 | 1) => (
     <div className="grid grid-cols-[1fr_18px_minmax(44px,0.8fr)_18px_1fr] gap-x-1">
       <div className="space-y-2">
-        {half(p.odd, h).map((id) => (
+        {half(p.even, h).map((id) => (
           <RoomCell key={id} d={d} id={id} mine={id === myRoom} onOpen={onOpen} />
         ))}
       </div>
@@ -114,7 +114,7 @@ export function FloorMap({ d, floor, myRoom, onOpen }: { d: Dorm; floor: Floor; 
       </div>
       <div className={corridor} aria-hidden="true" />
       <div className="space-y-2">
-        {half(p.even, h).map((id) => (
+        {half(p.odd, h).map((id) => (
           <RoomCell key={id} d={d} id={id} mine={id === myRoom} onOpen={onOpen} />
         ))}
       </div>
@@ -124,8 +124,8 @@ export function FloorMap({ d, floor, myRoom, onOpen }: { d: Dorm; floor: Floor; 
   return (
     <section aria-label={`מפת קומה ${floor}`} className="rounded-card border border-line bg-bg-elevated p-3 shadow-[var(--shadow)]">
       <div className="mb-2 grid grid-cols-2 text-center text-[11px] font-bold text-muted">
-        <span>צד אי-זוגי</span>
         <span>צד זוגי</span>
+        <span>צד אי-זוגי</span>
       </div>
       <div className="space-y-2">
         <SharedCell d={d} area={p.wc1} onOpen={onOpen} className="w-full" />
@@ -149,7 +149,7 @@ export function Legend() {
         </li>
       ))}
       <li className="flex items-center gap-1.5">
-        <House className="size-3.5 text-accent" aria-hidden="true" /> מסגרת ירוקה = החדר שלך
+        <House className="size-3.5 text-accent" aria-hidden="true" /> מסגרת מודגשת = החדר שלך
       </li>
     </ul>
   );

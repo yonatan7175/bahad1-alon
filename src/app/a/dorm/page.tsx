@@ -1,7 +1,7 @@
 import { AppPage } from "@/components/app-page";
 import { DormApp } from "@apps/dorm/src/app";
 
-export const metadata = { title: "מגורים" };
+export const metadata = { title: "מאסטר הלוגיסטיקה" };
 
 export default function Page() {
   return (

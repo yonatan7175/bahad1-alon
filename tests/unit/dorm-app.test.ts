@@ -40,6 +40,7 @@ describe("dorm app rules", () => {
     expect(new Set(t.item.enum)).toEqual(new Set(ITEMS.map((x) => x.id)));
     expect(new Set(manifest.collections.checks.schema.properties.room.enum)).toEqual(new Set(ROOMS.map((x) => x.id)));
     expect(new Set(manifest.collections.notes.schema.properties.room.enum)).toEqual(new Set(ROOMS.map((x) => x.id)));
+    expect(new Set(manifest.collections.area_notes.schema.properties.room.enum)).toEqual(new Set(AREAS.filter((x) => x.kind !== "room").map((x) => x.id)));
     expect(new Set(manifest.collections.tickets.schema.allOf[0].if.properties.item.enum)).toEqual(
       new Set(ITEMS.filter((i) => i.needsNote).map((i) => i.id)),
     );
@@ -101,5 +102,27 @@ describe("dorm app rules", () => {
     await expect(call(c, "data.add", { collection: "checks", data: { room: "243", day: israelToday() } })).rejects.toMatchObject({ code: "forbidden" });
     // The officer confirms any room.
     await expect(call(klag, "data.add", { collection: "checks", data: { room: "243", day: israelToday() } })).resolves.toBeTruthy();
+  });
+
+  it("a report from one roommate is visible to the whole room and to the logistics officer", async () => {
+    const t = (await call(a, "data.add", { collection: "tickets", data: { room: "241", item: "building", status: "open", slot: crypto.randomUUID(), note: "חור בקיר ליד הדלת" } })) as Rec;
+    for (const viewer of [b, klag]) {
+      const list = (await call(viewer, "data.list", { collection: "tickets", options: { where: { room: "241", status: "open" } } })) as Rec[];
+      expect(list.map((r) => r.id), viewer.name).toContain(t.id);
+    }
+    await call(a, "data.add", { collection: "notes", data: { room: "241", text: "מסדר: אבק על המדפים" } });
+    const notes = (await call(b, "data.list", { collection: "notes", options: { where: { room: "241" }, order: "createdAt:desc", limit: 1 } })) as Rec[];
+    expect(notes[0].data.text).toBe("מסדר: אבק על המדפים");
+  });
+
+  it("toilets / lobby: anyone opens requests and writes the morning-inspection summary", async () => {
+    const outsider = await user(db, "חניך בלי חדר", { companyId: (await db.query<{ company_id: string }>("select company_id from public.profiles where id = $1", [a.id])).rows[0].company_id });
+    await expect(call(outsider, "data.add", { collection: "tickets", data: { room: "2-wc1", item: "toilet_paper", status: "open", slot: "open" } })).resolves.toBeTruthy();
+    await expect(call(outsider, "data.add", { collection: "area_notes", data: { room: "2-wc1", text: "כיור 2 סתום" } })).resolves.toBeTruthy();
+    await expect(call(a, "data.add", { collection: "area_notes", data: { room: "2-wc1", text: "כיור 2 נפתח ✓" } })).resolves.toBeTruthy();
+    const list = (await call(klag, "data.list", { collection: "area_notes", options: { where: { room: "2-wc1" }, order: "createdAt:desc" } })) as Rec[];
+    expect(list.map((r) => r.data.text)).toEqual(["כיור 2 נפתח ✓", "כיור 2 סתום"]);
+    // area notes are only for shared areas
+    await expect(call(a, "data.add", { collection: "area_notes", data: { room: "241", text: "x" } })).rejects.toMatchObject({ code: "invalid" });
   });
 });

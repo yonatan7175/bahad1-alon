@@ -13,6 +13,7 @@ import { PersonCard } from "./person-card";
 import { MyBookings } from "./mine";
 import { Finder, type FreeSlot } from "./finder";
 import { Detail, Sheet } from "./sheet";
+import { NowStrip } from "./now-strip";
 
 type Tab = "calendar" | "mine" | "find";
 type SheetState =
@@ -123,6 +124,17 @@ export function LaundryApp() {
 
       {tab === "calendar" ? (
         <div className="space-y-3">
+          {day === today ? (
+            <NowStrip
+              data={data}
+              today={today}
+              now={now}
+              onBook={(m, time) => {
+                setKind(m.kind);
+                setSheet({ type: "book", day: today, time, choices: [m], machine: m });
+              }}
+            />
+          ) : null}
           <WeekNav day={day} today={today} horizon={horizon} onChange={setDay} marked={marked} onOpenMonth={() => setSheet({ type: "month" })} />
           <KindSwitch kind={kind} onChange={setKind} />
           {!bookable ? (

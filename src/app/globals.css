@@ -239,15 +239,32 @@
     isolation: isolate;
     overflow: hidden;
   }
-  /* subtle oak-leaf pattern on hero surfaces */
+  /* fine engraved-document pattern + a faint emblem watermark on hero surfaces */
   .hero::before {
     content: "";
     position: absolute;
     inset: 0;
     z-index: -1;
-    opacity: 0.09;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cpath d='M36 10c6 6 7 12 3 16 5-1 9 2 9 7-4 0-7 1-9 3 4 3 4 8 0 11-3-2-6-2-8 0 1 4-1 7-5 8 1-5-1-9-4-11 3-2 4-5 3-8-4 1-8-1-9-5 4-1 7-3 8-6-4-3-4-8 0-11 2 3 6 4 9 2-2-4 0-8 3-6z' fill='none' stroke='white' stroke-width='1.4'/%3E%3C/svg%3E");
-    background-size: 72px 72px;
+    opacity: 0.07;
+    background-image:
+      repeating-linear-gradient(135deg, white 0 1px, transparent 1px 11px),
+      repeating-linear-gradient(45deg, white 0 1px, transparent 1px 11px);
+    mask-image: linear-gradient(180deg, black, transparent 85%);
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset-inline-end: -48px;
+    bottom: -56px;
+    z-index: -1;
+    width: 240px;
+    height: 240px;
+    opacity: 0.1;
+    background: url("/brand/bahad1.svg") center / contain no-repeat;
+    filter: grayscale(1) brightness(3);
+  }
+  .hero-gold {
+    color: var(--hero-gold);
   }
   .glass {
     background: color-mix(in srgb, var(--bg) 82%, transparent);
@@ -350,4 +367,11 @@
 }
 .docs .copy-btn:hover {
   background: rgb(255 255 255 / 0.18);
+}
+
+/* Room for the phone bottom tab bar (only on pages that render it). */
+@media (width < 48rem) {
+  body:has(.bottom-nav) {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
 }

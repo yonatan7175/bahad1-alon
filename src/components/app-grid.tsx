@@ -2,9 +2,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ExternalLink, LayoutGrid, Search, SearchX, Sparkles, X } from "lucide-react";
+import { ExternalLink, LayoutGrid, Lightbulb, PlusCircle, Search, SearchX, X } from "lucide-react";
 import { matchesQuery } from "@/lib/hebrew";
-import { SchoolBadge } from "./brand";
+import { Ribbon, SchoolBadge } from "./brand";
 
 export interface GridApp {
   slug: string;
@@ -14,7 +14,7 @@ export interface GridApp {
   iconUrl: string;
   status: "live" | "beta" | "hidden" | "disabled";
   /** An admin-approved outside website ("הוספת אפליקציה"): opens in a new tab, no Platform API. */
-  link?: { url: string; emoji: string };
+  link?: { url: string; emoji: string; image?: string | null };
 }
 
 function greeting(h: number) {
@@ -66,22 +66,25 @@ export function AppGrid({
   return (
     <section aria-labelledby="hello">
       {/* hero */}
-      <div className="hero rounded-[28px] px-6 pb-16 pt-6 shadow-lift sm:px-10 sm:pb-20 sm:pt-9">
-        <SchoolBadge className="mb-3 opacity-90" />
-        <p className="text-sm font-medium opacity-80" suppressHydrationWarning>
-          {now?.date ?? " "}
-        </p>
-        <h1 id="hello" className="mt-1 text-3xl font-extrabold sm:text-4xl" suppressHydrationWarning>
-          {now?.hello ?? "שלום"}
-          {firstName ? `, ${firstName}` : ""}
-        </h1>
-        <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm opacity-85">
-          {unit ? <span>{unit}</span> : null}
-          <span className="inline-flex items-center gap-1.5">
-            <LayoutGrid className="size-4" aria-hidden="true" />
-            {apps.length} אפליקציות זמינות
-          </span>
-        </p>
+      <div className="hero rounded-[28px] shadow-lift">
+        <div className="px-6 pb-16 pt-6 sm:px-10 sm:pb-20 sm:pt-9">
+          <SchoolBadge className="mb-3" />
+          <p className="text-sm font-medium opacity-80" suppressHydrationWarning>
+            {now?.date ?? "\u00a0"}
+          </p>
+          <h1 id="hello" className="mt-1 text-3xl font-extrabold sm:text-4xl" suppressHydrationWarning>
+            {now?.hello ?? "שלום"}
+            {firstName ? <span className="hero-gold">, {firstName}</span> : ""}
+          </h1>
+          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm opacity-85">
+            {unit ? <span>{unit}</span> : null}
+            <span className="inline-flex items-center gap-1.5">
+              <LayoutGrid className="size-4" aria-hidden="true" />
+              {apps.length} אפליקציות
+            </span>
+          </p>
+        </div>
+        <Ribbon />
       </div>
 
       {/* search, overlapping the hero */}
@@ -143,7 +146,7 @@ export function AppGrid({
           </button>
         </div>
       ) : (
-        <ul className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+        <ul className="mt-5 grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-4 lg:grid-cols-5">
           {shown.map((a, i) => (
             <li key={a.slug} className="animate-rise" style={{ animationDelay: `${Math.min(i, 12) * 35}ms` }}>
               <AppCard app={a} />
@@ -152,64 +155,61 @@ export function AppGrid({
         </ul>
       )}
 
-      <Link
-        href="/dev"
-        className="group mt-8 flex items-center gap-4 rounded-card border border-dashed border-line-strong bg-bg-elevated p-5 transition-colors hover:border-accent hover:bg-accent-soft/40"
-      >
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-accent">
-          <Sparkles className="size-6" aria-hidden="true" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block font-bold">יש לך רעיון לאפליקציה?</span>
-          <span className="block text-sm text-muted">עם פרומפט מוכן ל-AI אפשר לבנות אחת תוך ערב — בלי ניסיון בתכנות.</span>
-        </span>
-        <span className="hidden text-sm font-semibold text-accent group-hover:underline sm:block">לאתר המפתחים ←</span>
-      </Link>
+      <div className="mt-8 grid gap-3 sm:grid-cols-2">
+        <Link href="/a/add-app" className="group flex items-center gap-4 rounded-card border border-dashed border-line-strong bg-bg-elevated p-4 transition-colors hover:border-accent hover:bg-accent-soft/40">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-accent">
+            <PlusCircle className="size-6" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">מכירים כלי שחסר כאן?</span>
+            <span className="block text-sm text-muted">הציעו אתר או אפליקציה — אחרי אישור הוא יופיע לכולם.</span>
+          </span>
+        </Link>
+        <Link href="/feedback" className="group flex items-center gap-4 rounded-card border border-dashed border-line-strong bg-bg-elevated p-4 transition-colors hover:border-gold hover:bg-gold-soft/50">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gold-soft text-gold">
+            <Lightbulb className="size-6" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">משהו לא עובד? יש רעיון?</span>
+            <span className="block text-sm text-muted">שינויים ושיפורים — ישירות למנהל האתר.</span>
+          </span>
+        </Link>
+      </div>
     </section>
   );
 }
 
 const CARD =
-  "group relative flex h-full flex-col rounded-card border border-line bg-surface p-4 shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-lift active:scale-[0.98]";
+  "group relative flex h-full flex-col items-center rounded-card border border-line bg-surface px-2 pb-4 pt-5 text-center shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-lift active:scale-[0.97]";
+const ICON = "size-16 rounded-[22px] shadow-[var(--shadow)] ring-1 ring-black/5";
 
 function AppCard({ app }: { app: GridApp }) {
   if (app.link) {
     return (
-      <a href={app.link.url} target="_blank" rel="noopener noreferrer" className={CARD} aria-label={`${app.name} (אתר חיצוני, נפתח בלשונית חדשה)`}>
-        <span className="flex items-start justify-between gap-2">
-          <span className="flex size-[52px] items-center justify-center rounded-2xl bg-surface-2 text-[28px] shadow-[var(--shadow-sm)]" aria-hidden="true">
+      <a href={app.link.url} target="_blank" rel="noopener noreferrer" className={CARD} aria-label={`${app.name} (נפתח בלשונית חדשה)`}>
+        <ExternalLink className="absolute end-2.5 top-2.5 size-3.5 text-subtle" aria-hidden="true" />
+        {app.link.image ? (
+          // eslint-disable-next-line @next/next/no-img-element -- uploaded icon (data URL, validated on the server)
+          <img src={app.link.image} alt="" width={64} height={64} className={`${ICON} object-cover`} loading="lazy" />
+        ) : (
+          <span className={`${ICON} flex items-center justify-center bg-surface-2 text-[32px]`} aria-hidden="true">
             {app.link.emoji}
           </span>
-          <ExternalLink className="size-4 text-muted" aria-hidden="true" />
-        </span>
+        )}
         <span className="mt-3 line-clamp-2 text-[15px] font-bold leading-snug">{app.name}</span>
-        <span className="mt-1 line-clamp-2 text-[13px] leading-snug text-muted">{app.description || new URL(app.link.url).hostname}</span>
-        <span className="mt-auto flex flex-wrap gap-1 pt-3">
-          {app.tags.map((t) => (
-            <span key={t} className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-muted">
-              {t}
-            </span>
-          ))}
-        </span>
       </a>
     );
   }
   return (
     <Link href={`/a/${app.slug}`} className={CARD}>
-      <span className="flex items-start justify-between gap-2">
-        {/* eslint-disable-next-line @next/next/no-img-element -- static SVG/PNG icon from the app folder */}
-        <img src={app.iconUrl} alt="" width={52} height={52} className="size-[52px] rounded-2xl shadow-[var(--shadow-sm)]" loading="lazy" />
-        {app.status === "beta" ? <span className="badge-beta">בטא</span> : app.status === "hidden" ? <span className="badge-hidden">מוסתר</span> : null}
-      </span>
+      {app.status === "beta" ? (
+        <span className="badge-beta absolute end-2 top-2">בטא</span>
+      ) : app.status === "hidden" ? (
+        <span className="badge-hidden absolute end-2 top-2">מוסתר</span>
+      ) : null}
+      {/* eslint-disable-next-line @next/next/no-img-element -- static SVG/PNG icon from the app folder */}
+      <img src={app.iconUrl} alt="" width={64} height={64} className={ICON} loading="lazy" />
       <span className="mt-3 line-clamp-2 text-[15px] font-bold leading-snug">{app.name}</span>
-      <span className="mt-1 line-clamp-2 text-[13px] leading-snug text-muted">{app.description}</span>
-      <span className="mt-auto flex flex-wrap gap-1 pt-3">
-        {app.tags.map((t) => (
-          <span key={t} className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-muted">
-            {t}
-          </span>
-        ))}
-      </span>
     </Link>
   );
 }
@@ -221,7 +221,7 @@ function EmptyState() {
         <LayoutGrid className="size-7" aria-hidden="true" />
       </span>
       <p className="mt-3 text-lg font-bold">עדיין אין כאן אפליקציות</p>
-      <p className="mt-1 max-w-xs text-muted">רוצים לבנות את הראשונה? כל ההסברים נמצאים באתר המפתחים.</p>
+      <p className="mt-1 max-w-xs text-muted">אפשר להציע את הראשונה דרך &quot;הוספת אפליקציה&quot;.</p>
     </div>
   );
 }

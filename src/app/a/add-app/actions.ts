@@ -7,7 +7,7 @@ import { getSession, type Session } from "@/platform/auth/session";
 import { getDb } from "@/platform/server/db";
 import { audit } from "@/platform/server/audit";
 import { effectiveStatus, getApp, loadOverride } from "@/platform/server/registry";
-import { MAX_PENDING_PER_USER, SUBMISSION_EMOJIS, cleanText, normalizeGithubRepo, normalizeSiteUrl } from "@/lib/submissions";
+import { MAX_PENDING_PER_USER, SUBMISSION_EMOJIS, cleanText, normalizeGithubRepo, normalizeSiteUrl, validIconDataUrl } from "@/lib/submissions";
 
 const PATH = "/a/add-app";
 const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -60,6 +60,9 @@ export async function submitApp(form: FormData) {
   }
   const emojiRaw = String(form.get("emoji") ?? "🔗");
   const emoji = (SUBMISSION_EMOJIS as readonly string[]).includes(emojiRaw) ? emojiRaw : "🔗";
+  const iconRaw = kind === "url" ? String(form.get("icon") ?? "") : "";
+  const icon = iconRaw ? validIconDataUrl(iconRaw) : null;
+  if (iconRaw && !icon) back({ error: "התמונה לא נתמכת — PNG, JPG או WEBP קטנה" }, kind);
 
   const { rows: pend } = await db.query<{ n: number }>(
     "select count(*)::int as n from public.app_submissions where submitted_by = $1 and status = 'pending'",
@@ -73,8 +76,8 @@ export async function submitApp(form: FormData) {
   if (dup[0]) back({ error: dup[0].status === "approved" ? "הקישור הזה כבר נמצא באתר" : "מישהו כבר הציע את הקישור הזה — הוא ממתין לאישור" }, kind);
 
   await db.query(
-    "insert into public.app_submissions (kind, name, description, url, emoji, submitted_by) values ($1, $2, $3, $4, $5, $6)",
-    [kind, name, description, url, emoji, s.profile.id],
+    "insert into public.app_submissions (kind, name, description, url, emoji, icon, submitted_by) values ($1, $2, $3, $4, $5, $6, $7)",
+    [kind, name, description, url, emoji, icon, s.profile.id],
   );
   back({ ok: "ההצעה נשלחה — מנהל האתר יאשר או ידחה אותה" }, kind);
 }

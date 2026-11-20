@@ -222,15 +222,14 @@ test("directory: everyone sees everyone; phone/email can be hidden", async ({ br
   await B.ctx.close();
 });
 
-test("developer docs and machine-readable files are public", async ({ request, page }) => {
-  for (const p of ["/llms.txt", "/llms-full.txt", "/bahad.d.ts", "/bahad.js", "/bahad.css"]) {
+test("the removed developer site redirects home; the app runtime files stay public", async ({ request }) => {
+  for (const p of ["/bahad.d.ts", "/bahad.js", "/bahad.css"]) {
     const r = await request.get(p);
     expect(r.status(), p).toBe(200);
   }
-  expect(await (await request.get("/llms-full.txt")).text()).toContain("bahad.data.collection");
-  await page.goto("/dev/starter-prompt");
-  await expect(page).toHaveURL(/\/dev\/starter-prompt/); // no login needed
-  await expect(page.getByRole("button", { name: "העתקה" })).toHaveCount(2);
+  const r = await request.get("/dev/starter-prompt", { maxRedirects: 0 });
+  expect([307, 308]).toContain(r.status());
+  expect(r.headers()["location"]).toBe("/");
   // a website, not an installable app
   const mf = await request.get("/manifest.webmanifest", { maxRedirects: 0 });
   expect(mf.status()).not.toBe(200);
@@ -252,7 +251,7 @@ test("pages work at 360px width without horizontal scrolling", async ({ browser 
   const ctx = await browser.newContext({ viewport: { width: 360, height: 740 } });
   const page = await ctx.newPage();
   await signIn(page, "cadet1@example.com");
-  for (const path of ["/", "/profile", "/people", "/dev", "/dev/api", "/a/laundry", "/admin"]) {
+  for (const path of ["/", "/profile", "/people", "/feedback", "/a/laundry", "/a/dorm", "/a/add-app", "/admin"]) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

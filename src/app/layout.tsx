@@ -8,7 +8,7 @@ import { OfflineBanner } from "@/components/offline-banner";
 
 export const metadata: Metadata = {
   title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
-  description: "פורטל האפליקציות של חניכי גדוד אלון — כלי לא רשמי",
+  description: "צ1 — כל הכלים של גדוד אלון, בה״ד 1, במקום אחד",
   applicationName: SITE_NAME,
   icons: {
     icon: [
@@ -26,8 +26,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f3f4ef" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0e0c" },
+    { media: "(prefers-color-scheme: light)", color: "#f2f4f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#070b14" },
   ],
 };
 

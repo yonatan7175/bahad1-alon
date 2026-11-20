@@ -1,10 +1,10 @@
 "use client";
-// מגורים — living-quarters logistics for גדוד אלון.
+// מאסטר הלוגיסטיקה — living-quarters logistics for גדוד אלון.
 // Tabs: החדר שלי (daily confirmation + 2-tap report) · מפה (live floor map) · ניהול (logistics officer).
 import { useEffect, useState } from "react";
 import { House, LayoutDashboard, Map as MapIcon } from "lucide-react";
 import { useBahad } from "@/platform/client";
-import { FLOORS, ROOMS, areaById, type Area, type Floor } from "./building";
+import { FLOORS, PLANS, ROOMS, areaById, type Area, type Floor } from "./building";
 import { itemById } from "./items";
 import { useDorm } from "./data";
 import { FloorMap, Legend } from "./map";
@@ -28,13 +28,13 @@ export function DormApp() {
   const currentFloor: Floor = floor ?? (myRoom ? (Number(myRoom[0]) as Floor) : 2);
 
   useEffect(() => {
-    bahad.ui.setTitle(current === "room" ? (myRoom ? `מגורים · חדר ${myRoom}` : "מגורים") : current === "map" ? `מגורים · קומה ${currentFloor}` : 'מגורים · לוח קל"ג');
+    bahad.ui.setTitle(current === "room" ? (myRoom ? `לוגיסטיקה · חדר ${myRoom}` : "מאסטר הלוגיסטיקה") : current === "map" ? `לוגיסטיקה · קומה ${currentFloor}` : 'לוגיסטיקה · תכלול קל"ג');
   }, [bahad, current, myRoom, currentFloor]);
 
   const tabs = [
     ["room", "החדר שלי", House],
     ["map", "מפה", MapIcon],
-    ...(d.isManager ? ([["manage", 'קל"ג', LayoutDashboard]] as const) : []),
+    ...(d.isManager ? ([["manage", "תכלול", LayoutDashboard]] as const) : []),
   ] as const;
 
   const floorOpen = (f: Floor) => (d.open ?? []).filter((t) => areaById(t.data.room)?.floor === f);
@@ -96,12 +96,40 @@ export function DormApp() {
             <DailyConfirm d={d} room={myRoom} isMine />
             <RoomNotes room={myRoom} canEdit />
             <section className="card p-4">
-              <h2 className="text-lg font-extrabold">מה חסר? דיווח בשתי לחיצות</h2>
-              <p className="mb-3 text-xs text-muted">כבר דיווחו מהחדר? תראו את זה כאן ותוכלו לסמן +1 במקום לפתוח פנייה כפולה.</p>
+              <h2 className="text-lg font-extrabold">פתיחת פנייה</h2>
+              <p className="mb-3 text-xs text-muted">כתבו במילים שלכם, או בחרו מהרשימה בשתי לחיצות. כבר דיווחו מהחדר? מסמנים +1 במקום לפתוח פנייה כפולה.</p>
               <QuickReport d={d} room={myRoom} />
             </section>
             <section>
               <RoomDetails d={d} room={myRoom} isMine hideConfirm />
+            </section>
+            <section className="card p-4">
+              <h2 className="text-lg font-extrabold">שירותים ולובי — קומה {myRoom[0]}</h2>
+              <p className="mb-3 text-xs text-muted">פתחו פנייה או כתבו את סיכום מסדר הבוקר — כולם יכולים.</p>
+              <div className="grid grid-cols-3 gap-2">
+                {(() => {
+                  const p = PLANS[Number(myRoom[0]) as Floor];
+                  return [p.wc1, p.lobby, p.wc2];
+                })().map((a) => {
+                  const n = (d.openByRoom.get(a.id) ?? []).length;
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => setSheet(a)}
+                      className={`relative flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-card border-2 p-2 text-center text-sm font-bold shadow-[var(--shadow-sm)] transition-all active:scale-95 ${
+                        n ? "border-warning/40 bg-warning-soft" : "border-line bg-surface hover:border-accent/50"
+                      }`}
+                    >
+                      <span className="text-2xl leading-none" aria-hidden="true">
+                        {a.kind === "lobby" ? "🚪" : "🚻"}
+                      </span>
+                      {a.kind === "lobby" ? "לובי" : `שירותים ${a.short.split(" ")[1]}`}
+                      {n ? <span className="text-[11px] font-semibold text-warning">{n} פתוחות</span> : null}
+                    </button>
+                  );
+                })}
+              </div>
             </section>
           </div>
         ) : (

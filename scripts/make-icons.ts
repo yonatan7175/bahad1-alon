@@ -20,7 +20,7 @@ async function main() {
     const inner = s.maskable || s.flat ? svg.replace(/rx="112"/, 'rx="0"') : svg;
     const scale = s.maskable ? 0.8 : 1;
     await page.setContent(
-      `<html><body style="margin:0;background:${s.maskable || s.flat ? "#335c81" : "transparent"}">
+      `<html><body style="margin:0;background:${s.maskable || s.flat ? "#08142b" : "transparent"}">
         <div style="width:${s.size}px;height:${s.size}px;display:flex;align-items:center;justify-content:center">
           <div style="width:${s.size * scale}px;height:${s.size * scale}px">${inner.replace("<svg ", '<svg width="100%" height="100%" ')}</div>
         </div></body></html>`,

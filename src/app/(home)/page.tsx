@@ -23,7 +23,7 @@ export default async function Home(props: PageProps<"/">) {
   }));
   // Websites approved through "הוספת אפליקציה" — link tiles that open in a new tab.
   for (const l of await approvedLinkApps(db)) {
-    apps.push({ slug: `link-${l.id}`, name: l.name, description: l.description, tags: ["קישורים"], iconUrl: "", status: "live", link: { url: l.url, emoji: l.emoji } });
+    apps.push({ slug: `link-${l.id}`, name: l.name, description: l.description, tags: ["קישורים"], iconUrl: "", status: "live", link: { url: l.url, emoji: l.emoji, image: l.icon } });
   }
   const tags = allTags()
     .map((t) => ({ name: t, count: apps.filter((a) => a.tags.includes(t)).length }))

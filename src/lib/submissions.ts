@@ -48,3 +48,17 @@ export function normalizeGithubRepo(raw: string): { url: string; owner: string; 
 export function cleanText(raw: FormDataEntryValue | null, max: number): string {
   return String(raw ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 }
+
+/** An uploaded tile image: a small PNG/JPEG/WEBP data URL whose bytes really are that format. Returns it or null. */
+export function validIconDataUrl(raw: string): string | null {
+  const m = /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(raw.trim());
+  if (!m || raw.length > 120_000) return null;
+  const bytes = Buffer.from(m[2], "base64");
+  if (bytes.length < 16) return null;
+  const hex = bytes.subarray(0, 12).toString("hex");
+  const ok =
+    (m[1] === "png" && hex.startsWith("89504e470d0a1a0a")) ||
+    (m[1] === "jpeg" && hex.startsWith("ffd8ff")) ||
+    (m[1] === "webp" && hex.startsWith("52494646") && hex.slice(16, 24) === "57454250");
+  return ok ? raw.trim() : null;
+}

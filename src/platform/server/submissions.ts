@@ -11,6 +11,7 @@ export interface Submission {
   description: string;
   url: string;
   emoji: string;
+  icon: string | null;
   status: SubmissionStatus;
   review_note: string | null;
   submitted_by: string | null;
@@ -20,7 +21,7 @@ export interface Submission {
   created_at: Date;
 }
 
-const COLS = `s.id, s.kind, s.name, s.description, s.url, s.emoji, s.status, s.review_note, s.submitted_by,
+const COLS = `s.id, s.kind, s.name, s.description, s.url, s.emoji, s.icon, s.status, s.review_note, s.submitted_by,
   p.full_name as submitter_name, r.full_name as reviewer_name, s.reviewed_at, s.created_at`;
 const FROM = `public.app_submissions s
   left join public.profiles p on p.id = s.submitted_by
@@ -40,9 +41,9 @@ export async function submissionsByStatus(db: Db, status: SubmissionStatus, kind
 }
 
 /** Approved websites for the home grid. */
-export async function approvedLinkApps(db: Db): Promise<Pick<Submission, "id" | "name" | "description" | "url" | "emoji">[]> {
+export async function approvedLinkApps(db: Db): Promise<Pick<Submission, "id" | "name" | "description" | "url" | "emoji" | "icon">[]> {
   const { rows } = await db.query<Submission>(
-    "select id, name, description, url, emoji from public.app_submissions where status = 'approved' and kind = 'url' order by name asc limit 100",
+    "select id, name, description, url, emoji, icon from public.app_submissions where status = 'approved' and kind = 'url' order by name asc limit 100",
   );
   return rows;
 }

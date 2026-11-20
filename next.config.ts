@@ -52,6 +52,13 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  // The developer site was removed — old links land on the home page.
+  async redirects() {
+    return [
+      { source: "/dev", destination: "/", permanent: false },
+      { source: "/dev/:path*", destination: "/", permanent: false },
+    ];
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

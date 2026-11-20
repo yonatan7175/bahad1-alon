@@ -17,7 +17,7 @@ function frameSrc(pathname: string): string {
   return ext ? `'self' ${ext}` : "'self'";
 }
 
-const PUBLIC_PREFIXES = ["/signin", "/auth/", "/dev", "/llms.txt", "/llms-full.txt", "/blocked", "/api/"];
+const PUBLIC_PREFIXES = ["/signin", "/auth/", "/blocked", "/api/"];
 
 function isPublic(pathname: string) {
   return PUBLIC_PREFIXES.some((p) => (p.endsWith("/") ? pathname.startsWith(p) : pathname === p || pathname.startsWith(p + "/")));

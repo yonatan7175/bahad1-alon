@@ -62,8 +62,10 @@ export function AppFrame({ app, children }: { app: PublicApp; children: ReactNod
             <Link href="/" aria-label="חזרה לדף הבית" className="icon-btn">
               <ArrowRight className="size-5" aria-hidden="true" />
             </Link>
-            {/* eslint-disable-next-line @next/next/no-img-element -- static app icon */}
-            <img src={app.iconUrl} alt="" width={30} height={30} className="ms-1 size-[30px] rounded-[9px] shadow-[var(--shadow-sm)]" />
+            <Link href="/" aria-label="צ1 — דף הבית" className="ms-1 shrink-0 rounded-[9px] transition-transform active:scale-95">
+              {/* eslint-disable-next-line @next/next/no-img-element -- static app icon */}
+              <img src={app.iconUrl} alt="" width={30} height={30} className="size-[30px] rounded-[9px] shadow-[var(--shadow-sm)]" />
+            </Link>
             <h1 className="ms-2 flex min-w-0 flex-1 items-center gap-2 text-base font-bold" data-testid="app-title">
               <span className="truncate">{title}</span>
               {app.status === "beta" ? <span className="badge-beta">בטא</span> : app.status === "hidden" ? <span className="badge-hidden">מוסתר</span> : null}
@@ -100,6 +102,7 @@ export function AppFrame({ app, children }: { app: PublicApp; children: ReactNod
             </div>
           </div>
         </header>
+        <span aria-hidden="true" className="block h-[2px] w-full" style={{ background: "linear-gradient(90deg, var(--hero-gold) 0 42%, var(--brand-red) 42% 58%, var(--hero-gold) 58% 100%)" }} />
         <div className="relative min-h-0 flex-1">{children}</div>
       </div>
       {about ? (

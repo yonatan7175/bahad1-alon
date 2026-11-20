@@ -1,7 +1,7 @@
 {
   "slug": "dorm",
-  "name": "מגורים",
-  "description": "דיווח חוסרים ותקלות בחדרים (מהרשימה או בכתיבה חופשית), הערות מסדר, מפת המגורים ולוח בקרה לקל\"ג",
+  "name": "מאסטר הלוגיסטיקה",
+  "description": "פניות ציוד ותחזוקה לחדרים ולשירותים (מהרשימה או בכתיבה חופשית), סיכומי מסדר, מפת המגורים ולוח תכלול לקל\"ג",
   "tier": "full",
   "icon": "icon.svg",
   "tags": [
@@ -126,7 +126,8 @@
               "other_missing",
               "lamp",
               "heating",
-              "other"
+              "other",
+              "building"
             ]
           },
           "note": {
@@ -166,7 +167,8 @@
                 "item": {
                   "enum": [
                     "other",
-                    "other_missing"
+                    "other_missing",
+                    "building"
                   ]
                 }
               }
@@ -390,7 +392,41 @@
           }
         }
       }
+    },
+    "area_notes": {
+      "read": "all",
+      "create": "any",
+      "moderate": "admin",
+      "schema": {
+        "type": "object",
+        "required": [
+          "room",
+          "text"
+        ],
+        "additionalProperties": false,
+        "description": "Morning-inspection summary for a shared area (toilets / lobby). Anyone may write; every edit adds a new version.",
+        "properties": {
+          "room": {
+            "type": "string",
+            "enum": [
+              "2-wc1",
+              "2-wc2",
+              "2-lobby",
+              "3-wc1",
+              "3-wc2",
+              "3-lobby",
+              "4-wc1",
+              "4-wc2",
+              "4-lobby"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 600
+          }
+        }
+      }
     }
   },
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

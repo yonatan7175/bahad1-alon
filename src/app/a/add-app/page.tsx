@@ -6,7 +6,8 @@ import { AppPage } from "@/components/app-page";
 import { requireApproved } from "@/platform/auth/session";
 import { getDb } from "@/platform/server/db";
 import { mySubmissions, submissionsByStatus, type Submission } from "@/platform/server/submissions";
-import { MAX_PENDING_PER_USER, SUBMISSION_EMOJIS } from "@/lib/submissions";
+import { MAX_PENDING_PER_USER } from "@/lib/submissions";
+import { IconPicker } from "./icon-picker";
 import { removeSubmission, reviewSubmission, submitApp, withdrawSubmission } from "./actions";
 
 export const metadata = { title: "הוספת אפליקציה" };
@@ -34,8 +35,15 @@ function Row({ s, children, who = false }: { s: Submission; children?: React.Rea
   return (
     <li className="rounded-ctl border border-line bg-surface p-3 shadow-[var(--shadow-sm)]">
       <div className="flex items-start gap-3">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-ctl bg-surface-2 text-2xl" aria-hidden="true">
-          {s.kind === "github" ? <FolderGit2 className="size-5" /> : s.emoji}
+        <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-ctl bg-surface-2 text-2xl" aria-hidden="true">
+          {s.kind === "github" ? (
+            <FolderGit2 className="size-5" />
+          ) : s.icon ? (
+            // eslint-disable-next-line @next/next/no-img-element -- uploaded icon (validated data URL)
+            <img src={s.icon} alt="" className="size-full object-cover" />
+          ) : (
+            s.emoji
+          )}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -169,22 +177,7 @@ export default async function Page(props: PageProps<"/a/add-app">) {
               </label>
               <input id="description" name="description" className="field" maxLength={120} placeholder="מה זה ולמה זה שימושי לגדוד" />
             </div>
-            {kind === "url" ? (
-              <fieldset>
-                <legend className="label">אייקון</legend>
-                <div className="flex flex-wrap gap-1.5">
-                  {SUBMISSION_EMOJIS.map((e, i) => (
-                    <label key={e} className="cursor-pointer">
-                      <input type="radio" name="emoji" value={e} defaultChecked={i === 0} className="peer sr-only" />
-                      <span className="flex size-11 items-center justify-center rounded-ctl border-2 border-line bg-surface text-xl transition-all peer-checked:border-accent peer-checked:bg-accent-soft peer-focus-visible:ring-2 peer-focus-visible:ring-accent">
-                        {e}
-                      </span>
-                      <span className="sr-only">{e}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-            ) : null}
+            {kind === "url" ? <IconPicker /> : null}
             <p className="rounded-ctl bg-warning-soft px-3 py-2 text-xs font-medium text-warning">
               אסור להציע אתרים עם מידע מסווג, מידע אישי, או אתר שמתחזה למערכת רשמית של צה&quot;ל.
             </p>

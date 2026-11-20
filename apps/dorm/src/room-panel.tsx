@@ -1,12 +1,12 @@
 "use client";
 // Everything about one room/area: daily confirmation, quick report (2 taps), open requests, recent history.
 import { useState } from "react";
-import { ArrowRight, CheckCircle2, Send, ShieldCheck, Undo2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, PenLine, Send, ShieldCheck, Undo2 } from "lucide-react";
 import { areaById } from "./building";
-import { GROUP_LABEL, ITEMS, type Group, type Item } from "./items";
+import { FREE_KINDS, GROUP_LABEL, ITEMS, itemById, type Group, type Item } from "./items";
 import { hhmm, type Dorm } from "./data";
 import { TicketCard } from "./ticket-card";
-import { RoomNotes } from "./notes";
+import { AreaNotes, RoomNotes } from "./notes";
 
 export function DailyConfirm({ d, room, isMine }: { d: Dorm; room: string; isMine: boolean }) {
   const check = d.checkByRoom.get(room);
@@ -65,13 +65,73 @@ export function DailyConfirm({ d, room, isMine }: { d: Dorm; room: string; isMin
   );
 }
 
+/** "פנייה חופשית" — any problem in your own words: missing equipment, maintenance or building. */
+export function FreeTextReport({ d, room }: { d: Dorm; room: string }) {
+  const [kind, setKind] = useState<(typeof FREE_KINDS)[number]["id"]>("other");
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const k = FREE_KINDS.find((x) => x.id === kind)!;
+  return (
+    <form
+      className="rounded-card border-2 border-accent/25 bg-accent-soft/40 p-3"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        const ok = await d.report(room, kind, text);
+        setBusy(false);
+        if (ok) setText("");
+      }}
+    >
+      <p className="flex items-center gap-2 font-extrabold">
+        <PenLine className="size-[18px] text-accent" aria-hidden="true" /> פנייה חופשית
+      </p>
+      <p className="mb-2 text-xs text-muted">לא מצאתם ברשימה? כתבו במילים שלכם — הפנייה מגיעה לקל&quot;ג.</p>
+      <div className="mb-2 grid grid-cols-3 gap-1 rounded-ctl bg-surface-2 p-1" role="radiogroup" aria-label="סוג הפנייה">
+        {FREE_KINDS.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            role="radio"
+            aria-checked={kind === f.id}
+            onClick={() => setKind(f.id)}
+            className={`flex min-h-10 items-center justify-center gap-1 rounded-[9px] text-sm font-bold transition-all ${
+              kind === f.id ? "bg-surface text-fg shadow-[var(--shadow-sm)]" : "text-muted"
+            }`}
+          >
+            <span aria-hidden="true">{itemById(f.id)?.emoji}</span> {f.label}
+          </button>
+        ))}
+      </div>
+      <label className="sr-only" htmlFor={`free-${room}`}>
+        תיאור הבעיה
+      </label>
+      <textarea
+        id={`free-${room}`}
+        className="field min-h-24 bg-surface"
+        required
+        minLength={2}
+        maxLength={200}
+        placeholder={k.hint}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <span className="text-xs text-subtle tabular-nums">{text.length}/200</span>
+        <button type="submit" className="btn min-h-11 px-5" disabled={busy || text.trim().length < 2}>
+          <Send className="size-4" aria-hidden="true" /> שליחה לקל&quot;ג
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export function QuickReport({ d, room }: { d: Dorm; room: string }) {
   const [pick, setPick] = useState<Item | null>(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const area = areaById(room);
   const groups: Group[] = ["supply", "equipment", "fault"];
-  const items = area?.kind === "room" ? ITEMS : ITEMS.filter((i) => i.id !== "bucket" && i.id !== "mop");
+  const items = (area?.kind === "room" ? ITEMS : ITEMS.filter((i) => i.id !== "bucket" && i.id !== "mop")).filter((i) => !i.needsNote);
 
   if (pick) {
     const existing = pick.repeatable ? undefined : d.findOpen(room, pick.id);
@@ -130,6 +190,7 @@ export function QuickReport({ d, room }: { d: Dorm; room: string }) {
 
   return (
     <div className="space-y-4">
+      <FreeTextReport d={d} room={room} />
       {groups.map((g) => {
         const list = items.filter((i) => i.group === g);
         if (!list.length) return null;
@@ -191,6 +252,8 @@ export function RoomDetails({ d, room, isMine, hideConfirm = false }: { d: Dorm;
           <DailyConfirm d={d} room={room} isMine={isMine} />
           <RoomNotes room={room} canEdit={isMine || d.isManager} />
         </>
+      ) : area && area.kind !== "room" ? (
+        <AreaNotes room={room} />
       ) : null}
       <div>
         <div className="mb-2 flex items-center justify-between gap-2">

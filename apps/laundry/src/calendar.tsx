@@ -167,7 +167,7 @@ export function Legend() {
   );
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-      {item("border border-dashed border-line-strong bg-surface", "פנוי")}
+      {item("border border-danger/35 bg-[repeating-linear-gradient(135deg,color-mix(in_srgb,var(--danger)_22%,transparent)_0_3px,transparent_3px_6px)]", "לא שובץ — פנוי")}
       {item("bg-accent", "שלי")}
       {item("bg-surface-3", "תפוס")}
       {item("bg-[repeating-linear-gradient(135deg,var(--surface-2)_0_4px,var(--surface-3)_4px_8px)]", "עבר / תקולה")}
@@ -295,9 +295,9 @@ export function CalendarGrid({
                     type="button"
                     onClick={() => onFree(m, time)}
                     aria-label={`${m.label} ${time}–${slotEnd(time)} פנוי — שריון`}
-                    className={`${base} group border border-dashed border-line-strong/70 text-transparent hover:border-accent hover:bg-accent-soft hover:text-accent`}
+                    className={`${base} group border border-danger/35 bg-[repeating-linear-gradient(135deg,color-mix(in_srgb,var(--danger)_16%,transparent)_0_5px,transparent_5px_10px)] text-danger/70 hover:border-accent hover:bg-none hover:bg-accent-soft hover:text-accent`}
                   >
-                    <span className="text-base leading-none group-hover:text-accent">+</span>
+                    <span className="text-base font-bold leading-none">+</span>
                   </button>
                 );
               })}

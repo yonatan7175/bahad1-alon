@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Code2, House, LogOut, ShieldCheck, UserRound, UsersRound } from "lucide-react";
+import { ChevronDown, House, Lightbulb, LogOut, ShieldCheck, UserRound, UsersRound } from "lucide-react";
 import { Avatar } from "./avatar";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -84,8 +84,8 @@ export function UserMenu({ user }: { user: MenuUser }) {
                 {user.pending ? <span className="badge-danger ms-auto">{user.pending} ממתינים</span> : null}
               </Link>
             ) : null}
-            <Link role="menuitem" href="/dev" className="menu-item">
-              <Code2 aria-hidden="true" /> אתר המפתחים
+            <Link role="menuitem" href="/feedback" className="menu-item">
+              <Lightbulb aria-hidden="true" /> שינויים ושיפורים
             </Link>
           </div>
           <div className="mt-1.5 border-t border-line px-1.5 pb-1 pt-3">

@@ -22,6 +22,7 @@ export const ITEMS: Item[] = [
   { id: "lamp", label: "מנורה להחלפה", short: "מנורה", emoji: "💡", group: "fault" },
   { id: "heating", label: "ההסקה לא עובדת", short: "הסקה", emoji: "🔥", group: "fault" },
   { id: "other", label: "תקלה אחרת", short: "תקלה", emoji: "🛠️", group: "fault", needsNote: true, repeatable: true },
+  { id: "building", label: "בעיית בינוי", short: "בינוי", emoji: "🧱", group: "fault", needsNote: true, repeatable: true },
 ];
 const BY_ID = new Map(ITEMS.map((i) => [i.id, i]));
 export const itemById = (id: string) => BY_ID.get(id);
@@ -29,8 +30,15 @@ export const itemById = (id: string) => BY_ID.get(id);
 export const GROUP_LABEL: Record<Group, string> = {
   supply: "מתכלים — מתמלא כל הזמן",
   equipment: "ציוד חסר",
-  fault: "תקלות תחזוקה",
+  fault: "תקלות תחזוקה ובינוי",
 };
+
+/** The free-text request kinds ("פנייה חופשית"): what the cadet writes decides the category. */
+export const FREE_KINDS = [
+  { id: "other_missing", label: "ציוד חסר", hint: "למשל: כיסא שבור להחלפה, מדף, כיסוי למזרן, מטאטא" },
+  { id: "other", label: "תחזוקה", hint: "למשל: הברז בכיור דולף, הדלת לא ננעלת, שקע חשמל לא עובד" },
+  { id: "building", label: "בינוי", hint: "למשל: חור בקיר, אריח שבור ברצפה, רטיבות בתקרה, חלון שלא נסגר" },
+] as const;
 
 export type Status = "open" | "in_progress" | "closed";
 export const STATUS_LABEL: Record<Status, string> = { open: "פתוחה", in_progress: "בטיפול", closed: "טופלה" };
