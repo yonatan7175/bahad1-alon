@@ -8,9 +8,11 @@
   },
   "scripts": {
     "gen": "tsx scripts/gen.ts",
-    "dev": "pnpm gen && next dev",
+    "dev": "pnpm gen && next dev -p 3001",
     "build": "pnpm gen && next build",
     "start": "next start",
+    "prod:start": "BAHAD_DIST_DIR=.next-prod next start -p 3000 -H 127.0.0.1",
+    "release": "./deploy/local/release.sh",
     "lint": "eslint",
     "typecheck": "pnpm gen && next typegen && tsc --noEmit",
     "test": "pnpm gen && vitest run",

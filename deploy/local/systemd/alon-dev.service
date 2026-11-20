@@ -1,0 +1,14 @@
+# Development server on 127.0.0.1:3001 (fake sign-in, separate data in .data/pglite-dev).
+[Unit]
+Description=Alon portal — development (:3001)
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/AlonSite
+Environment=PATH=%h/.local/opt/node/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.local/opt/node/bin/pnpm dev -H 127.0.0.1
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
