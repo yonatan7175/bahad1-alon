@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { CircleAlert, FlaskConical, LockKeyhole, UserPlus } from "lucide-react";
+import { CircleAlert, FlaskConical, UserPlus } from "lucide-react";
 import { getSession, safeNext } from "@/platform/auth/session";
 import { authMode } from "@/platform/server/config";
 import { ROLE_LABEL, STATUS_LABEL } from "@/lib/site";
@@ -28,10 +28,7 @@ export default async function SignIn(props: PageProps<"/signin">) {
         </p>
       ) : null}
       <div className="mt-6">{mode === "mock" ? <MockSignIn next={next} /> : <GoogleSignInButton next={next} direct={mode === "google"} />}</div>
-      <p className="mt-6 flex items-start gap-2 rounded-ctl bg-surface-2 p-3 text-xs leading-relaxed text-muted">
-        <LockKeyhole className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-        צ1 לעולם לא יבקש שם משתמש או סיסמה של צה&quot;ל.
-      </p>
+      <p className="mt-6 border-t border-line pt-4 text-center text-sm font-bold tracking-wide text-accent-ink">כל הטכנולוגיה של הבית במקום אחד</p>
     </AuthShell>
   );
 }
