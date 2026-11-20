@@ -1,27 +1,31 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Wind, WashingMachine, Wrench } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, Wind, WashingMachine, Wrench } from "lucide-react";
 import { MACHINES, SLOTS, SLOT_MINUTES, type Kind, type Machine } from "./machines";
 import { addDays, israelDay, monthGrid, monthLabel, slotEnd, slotStart, weekDays } from "./time";
 import type { Laundry, Rec } from "./data";
 
 const ROW = 52; // px per 40-minute row (≥ 44px tap target)
 
-export function KindSwitch({ kind, onChange }: { kind: Kind; onChange: (k: Kind) => void }) {
-  const opts: { k: Kind; label: string; Icon: typeof Wind; n: number }[] = [
+/** What the calendar shows: one machine kind, or all three machines side by side. */
+export type View = Kind | "all";
+
+export function KindSwitch<T extends View>({ kind, onChange, withAll = false }: { kind: T; onChange: (k: T) => void; withAll?: boolean }) {
+  const opts: { k: View; label: string; Icon: typeof Wind; n: number }[] = [
+    ...(withAll ? [{ k: "all" as const, label: "הכל", Icon: LayoutGrid, n: MACHINES.length }] : []),
     { k: "washer", label: "כביסה", Icon: WashingMachine, n: MACHINES.filter((m) => m.kind === "washer").length },
     { k: "dryer", label: "ייבוש", Icon: Wind, n: MACHINES.filter((m) => m.kind === "dryer").length },
   ];
   return (
-    <div role="radiogroup" aria-label="סוג מכונה" className="grid grid-cols-2 gap-1 rounded-ctl bg-surface-2 p-1">
+    <div role="radiogroup" aria-label="סוג מכונה" className={`grid gap-1 rounded-ctl bg-surface-2 p-1 ${withAll ? "grid-cols-3" : "grid-cols-2"}`}>
       {opts.map(({ k, label, Icon, n }) => (
         <button
           key={k}
           type="button"
           role="radio"
           aria-checked={kind === k}
-          onClick={() => onChange(k)}
-          className={`flex min-h-10 items-center justify-center gap-2 rounded-[9px] text-sm font-semibold transition-all ${
+          onClick={() => onChange(k as T)}
+          className={`flex min-h-10 items-center justify-center gap-1.5 rounded-[9px] text-sm font-semibold transition-all ${
             kind === k ? "bg-surface text-fg shadow-[var(--shadow-sm)]" : "text-muted hover:text-fg"
           }`}
         >
@@ -167,10 +171,11 @@ export function Legend() {
   );
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-      {item("border border-danger/35 bg-[repeating-linear-gradient(135deg,color-mix(in_srgb,var(--danger)_22%,transparent)_0_3px,transparent_3px_6px)]", "לא שובץ — פנוי")}
+      {item("border border-dashed border-line-strong bg-surface", "פנוי")}
       {item("bg-accent", "שלי")}
       {item("bg-surface-3", "תפוס")}
-      {item("bg-[repeating-linear-gradient(135deg,var(--surface-2)_0_4px,var(--surface-3)_4px_8px)]", "עבר / תקולה")}
+      {item("border border-danger/35 bg-[repeating-linear-gradient(135deg,color-mix(in_srgb,var(--danger)_30%,transparent)_0_3px,transparent_3px_6px)]", "עבר")}
+      {item("bg-[repeating-linear-gradient(135deg,var(--surface-2)_0_4px,var(--surface-3)_4px_8px)]", "תקולה / מחוץ לטווח")}
     </div>
   );
 }
@@ -187,7 +192,7 @@ export function CalendarGrid({
 }: {
   data: Laundry;
   day: string;
-  kind: Kind;
+  kind: View;
   now: Date;
   /** false outside the booking window (before today / more than 4 weeks ahead) */
   bookable: boolean;
@@ -195,7 +200,7 @@ export function CalendarGrid({
   onBooked: (r: Rec) => void;
   onMachine: (m: Machine) => void;
 }) {
-  const machines = MACHINES.filter((m) => m.kind === kind);
+  const machines = kind === "all" ? MACHINES : MACHINES.filter((m) => m.kind === kind);
   const list = data.byDay[day];
   const map = useMemo(() => new Map((list ?? []).map((r) => [`${r.data.machine}|${r.data.time}`, r])), [list]);
   const isToday = day === israelDay(now);
@@ -213,7 +218,7 @@ export function CalendarGrid({
 
   const minutesFromStart = (now.getTime() - slotStart(day, SLOTS[0]).getTime()) / 60_000;
   const nowTop = (minutesFromStart / SLOT_MINUTES) * ROW;
-  const cols = { gridTemplateColumns: `52px repeat(${machines.length}, minmax(0, 1fr))` };
+  const cols = { gridTemplateColumns: `${machines.length > 2 ? 44 : 52}px repeat(${machines.length}, minmax(0, 1fr))` };
 
   return (
     <div className="rounded-card border border-line bg-surface shadow-soft">
@@ -267,7 +272,13 @@ export function CalendarGrid({
                       type="button"
                       onClick={() => onBooked(rec)}
                       aria-label={`${m.label} ${time}–${slotEnd(time)} ${own ? "השריון שלי" : `תפוס ע"י ${booker(rec)}${rec.data.phone ? `, ${rec.data.phone}` : ""}`}`}
-                      className={`${base} ${own ? "bg-accent text-accent-contrast shadow-[var(--shadow-sm)] hover:bg-accent-hover" : "bg-surface-3 text-fg"} ${past ? "opacity-50" : ""}`}
+                      className={`${base} ${
+                        past
+                          ? "border border-danger/25 bg-[repeating-linear-gradient(135deg,color-mix(in_srgb,var(--danger)_18%,transparent)_0_5px,transparent_5px_10px)] text-muted"
+                          : own
+                            ? "bg-accent text-accent-contrast shadow-[var(--shadow-sm)] hover:bg-accent-hover"
+                            : "bg-surface-3 text-fg"
+                      }`}
                     >
                       <span className="flex min-w-0 flex-col items-center leading-tight">
                         <span className="max-w-full truncate">{booker(rec)}</span>
@@ -280,7 +291,11 @@ export function CalendarGrid({
                     </button>
                   );
                 }
-                if (past || broken || !bookable) {
+                if (past) {
+                  // Time already passed — red stripes.
+                  return <span key={m.id} className={`${base} border border-danger/25 bg-[repeating-linear-gradient(135deg,color-mix(in_srgb,var(--danger)_18%,transparent)_0_5px,transparent_5px_10px)]`} aria-hidden="true" />;
+                }
+                if (broken || !bookable) {
                   return (
                     <span
                       key={m.id}
@@ -295,9 +310,9 @@ export function CalendarGrid({
                     type="button"
                     onClick={() => onFree(m, time)}
                     aria-label={`${m.label} ${time}–${slotEnd(time)} פנוי — שריון`}
-                    className={`${base} group border border-danger/35 bg-[repeating-linear-gradient(135deg,color-mix(in_srgb,var(--danger)_16%,transparent)_0_5px,transparent_5px_10px)] text-danger/70 hover:border-accent hover:bg-none hover:bg-accent-soft hover:text-accent`}
+                    className={`${base} group border border-dashed border-line-strong/70 text-transparent hover:border-accent hover:bg-accent-soft hover:text-accent`}
                   >
-                    <span className="text-base font-bold leading-none">+</span>
+                    <span className="text-base leading-none group-hover:text-accent">+</span>
                   </button>
                 );
               })}

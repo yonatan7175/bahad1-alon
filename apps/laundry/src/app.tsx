@@ -8,7 +8,7 @@ import { useBahad } from "@/platform/client";
 import { BOOK_DAYS_AHEAD, KIND_LABEL, MACHINES, REMINDER_MINUTES, SLOT_MINUTES, WEEKLY_LIMIT, machineById, type Kind, type Machine } from "./machines";
 import { addDays, dayLabel, israelDay, slotEnd } from "./time";
 import { useLaundry, type Rec } from "./data";
-import { CalendarGrid, KindSwitch, Legend, MonthPicker, WeekNav } from "./calendar";
+import { CalendarGrid, KindSwitch, Legend, MonthPicker, WeekNav, type View } from "./calendar";
 import { PersonCard } from "./person-card";
 import { MyBookings } from "./mine";
 import { Finder, type FreeSlot } from "./finder";
@@ -32,6 +32,8 @@ export function LaundryApp() {
   const [tab, setTab] = useState<Tab>("calendar");
   const [day, setDay] = useState(today);
   const [kind, setKind] = useState<Kind>("washer");
+  /** The calendar shows all three machines by default; "כביסה"/"ייבוש" narrow it. */
+  const [view, setView] = useState<View>("all");
   const [sheet, setSheet] = useState<SheetState>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
@@ -48,7 +50,10 @@ export function LaundryApp() {
     const k = q.get("kind");
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the URL once on mount
     if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) setDay(d);
-    if (k === "washer" || k === "dryer") setKind(k);
+    if (k === "washer" || k === "dryer") {
+      setKind(k);
+      setView(k);
+    }
   }, []);
 
   const { loadDay } = data;
@@ -136,7 +141,14 @@ export function LaundryApp() {
             />
           ) : null}
           <WeekNav day={day} today={today} horizon={horizon} onChange={setDay} marked={marked} onOpenMonth={() => setSheet({ type: "month" })} />
-          <KindSwitch kind={kind} onChange={setKind} />
+          <KindSwitch
+            kind={view}
+            withAll
+            onChange={(v) => {
+              setView(v);
+              if (v !== "all") setKind(v);
+            }}
+          />
           {!bookable ? (
             <p className="flex items-center gap-2 rounded-ctl border border-line bg-surface-2 px-3 py-2 text-sm text-muted">
               <Eye className="size-4 shrink-0" aria-hidden="true" />
@@ -148,14 +160,17 @@ export function LaundryApp() {
           <div className="flex items-center justify-between gap-3 px-1">
             <Legend />
             <span className="shrink-0 text-xs font-semibold text-muted">
-              השבוע: {data.usedInWeek(day, kind)}/{WEEKLY_LIMIT} {KIND_LABEL[kind].many}
+              השבוע:{" "}
+              {view === "all"
+                ? `${data.usedInWeek(day, "washer")}/${WEEKLY_LIMIT} ${KIND_LABEL.washer.many} · ${data.usedInWeek(day, "dryer")}/${WEEKLY_LIMIT} ${KIND_LABEL.dryer.many}`
+                : `${data.usedInWeek(day, view)}/${WEEKLY_LIMIT} ${KIND_LABEL[view].many}`}
             </span>
           </div>
           <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
           <CalendarGrid
             data={data}
             day={day}
-            kind={kind}
+            kind={view}
             now={now}
             bookable={bookable}
             onFree={openFree}
