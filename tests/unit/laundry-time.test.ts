@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import laundryManifest from "../../apps/laundry/app.json";
 import { dayLabel, israelDay, israelHour, israelIso, israelOffsetMinutes, israelTime, nextDays } from "@apps/laundry/src/time";
 
 describe("laundry Israel-time helpers", () => {
@@ -56,6 +57,10 @@ describe("laundry 40-minute slot helpers", () => {
     expect(SLOTS.at(-1)).toBe("23:20");
     expect(SLOTS).toHaveLength(27);
     for (const t of SLOTS) expect(t).toMatch(/^([01]\d|2[0-3]):(00|20|40)$/);
+  });
+  it("the server accepts exactly these slot starts (app.json enum = SLOTS)", () => {
+    expect(laundryManifest.collections.bookings.schema.properties.time.enum).toEqual(SLOTS);
+    expect(laundryManifest.collections.bookings.schema.properties.time.enum).not.toContain("11:00"); // off-grid
   });
   it("weekRange is Sunday–Saturday", () => {
     expect(weekRange("2026-11-22")).toEqual(["2026-11-22", "2026-11-28"]); // Sunday
