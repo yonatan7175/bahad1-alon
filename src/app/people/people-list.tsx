@@ -14,6 +14,7 @@ export interface PersonRow {
   company: string | null;
   platoon: string | null;
   phone: string | null;
+  positions: string[];
 }
 
 export function PeopleList({ people, meId }: { people: PersonRow[]; meId: string }) {
@@ -21,7 +22,7 @@ export function PeopleList({ people, meId }: { people: PersonRow[]; meId: string
   const [company, setCompany] = useState<string | null>(null);
   const companies = useMemo(() => [...new Set(people.map((p) => p.company).filter((c): c is string => !!c))], [people]);
   const shown = people.filter(
-    (p) => (!company || p.company === company) && matchesQuery([p.name, p.company ?? "", p.platoon ?? "", ROLE_LABEL[p.role] ?? "", p.phone ?? ""], q),
+    (p) => (!company || p.company === company) && matchesQuery([p.name, p.company ?? "", p.platoon ?? "", ROLE_LABEL[p.role] ?? "", p.phone ?? "", ...p.positions], q),
   );
   return (
     <>
@@ -30,7 +31,7 @@ export function PeopleList({ people, meId }: { people: PersonRow[]; meId: string
           חיפוש
         </label>
         <Search className="pointer-events-none absolute start-4 top-1/2 size-5 -translate-y-1/2 text-subtle" aria-hidden="true" />
-        <input id="people-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש לפי שם, מחלקה או טלפון" className="field h-12 ps-12" />
+        <input id="people-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש לפי שם, מחלקה, תפקיד או טלפון" className="field h-12 ps-12" />
       </div>
       {companies.length > 1 ? (
         <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]" role="group" aria-label="סינון לפי פלוגה">
@@ -60,6 +61,11 @@ export function PeopleList({ people, meId }: { people: PersonRow[]; meId: string
                     <span className="truncate">{p.name}</span>
                     {p.id === meId ? <span className="badge-hidden">את/ה</span> : null}
                     {p.role !== "cadet" ? <span className="badge-accent">{ROLE_LABEL[p.role]}</span> : null}
+                    {p.positions.map((x) => (
+                      <span key={x} className="badge-accent shrink-0">
+                        {x}
+                      </span>
+                    ))}
                   </span>
                   <span className="block truncate text-xs text-muted">{[p.company, p.platoon].filter(Boolean).join(" · ") || "ללא יחידה"}</span>
                 </span>

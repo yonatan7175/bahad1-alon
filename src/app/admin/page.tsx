@@ -10,7 +10,8 @@ import { SENSITIVE_SCOPES } from "@/platform/manifest";
 import { ROLE_LABEL, SCOPE_LABEL, STATUS_LABEL } from "@/lib/site";
 import { PortalHeader } from "@/components/portal-header";
 import { Avatar } from "@/components/avatar";
-import { AppWindow, Building2, Check, History, Plus, Search, ShieldAlert, Trash2, UserRoundCheck, Users, X } from "lucide-react";
+import { AppWindow, BadgeCheck, Building2, Check, History, Plus, Search, ShieldAlert, Trash2, UserRoundCheck, Users, X } from "lucide-react";
+import { appRef, linkRef, listHolders, listPositions, pendingPositionCount, positionLabel, POSITION_SCOPE_LABEL } from "@/platform/server/positions";
 import * as A from "./actions";
 
 export const metadata: Metadata = { title: "ניהול" };
@@ -18,6 +19,7 @@ export const metadata: Metadata = { title: "ניהול" };
 const TABS = [
   ["users", "משתמשים", Users],
   ["units", "פלוגות ומחלקות", Building2],
+  ["positions", "תפקידים", BadgeCheck],
   ["apps", "אפליקציות", AppWindow],
   ["audit", "יומן", History],
 ] as const;
@@ -63,6 +65,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
               (select count(*)::int from public.app_overrides) as overrides`,
     )
   ).rows[0];
+  const pendingPositions = isAdmin ? await pendingPositionCount(db) : 0;
 
   return (
     <>
@@ -99,6 +102,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
                   <Icon className="size-4" aria-hidden="true" />
                   {label}
                   {t === "users" && stats.pending ? <span className="badge-danger">{stats.pending}</span> : null}
+                  {t === "positions" && pendingPositions ? <span className="badge-danger">{pendingPositions}</span> : null}
                 </Link>
               ))}
             </div>
@@ -119,6 +123,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
 
         {tab === "users" ? <UsersTab db={db} isAdmin={isAdmin} myCompany={me.company_id} q={q} companies={companies} platoons={platoons} /> : null}
         {tab === "units" ? <UnitsTab companies={companies} platoons={platoons} /> : null}
+        {tab === "positions" ? <PositionsTab db={db} /> : null}
         {tab === "apps" ? <AppsTab db={db} /> : null}
         {tab === "audit" ? <AuditTab db={db} /> : null}
       </main>
@@ -275,7 +280,7 @@ async function UsersTab({
                         <input name="name" defaultValue={u.full_name ?? ""} className="field" required />
                       </label>
                       <label className="block">
-                        <span className="label mt-0">תפקיד</span>
+                        <span className="label mt-0">סוג משתמש</span>
                         <select name="role" defaultValue={u.role} className="field">
                           {Object.entries(ROLE_LABEL).map(([v, l]) => (
                             <option key={v} value={v}>
@@ -406,6 +411,207 @@ function UnitsTab({ companies, platoons }: { companies: { id: string; name: stri
           </ul>
         </section>
       ))}
+    </div>
+  );
+}
+
+async function PositionsTab({ db }: { db: Awaited<ReturnType<typeof getDb>> }) {
+  const [positions, holders] = await Promise.all([listPositions(db), listHolders(db)]);
+  const people = (
+    await db.query<{ id: string; full_name: string | null; email: string }>(
+      "select id, full_name, email from public.profiles where status = 'approved' order by full_name nulls last limit 2000",
+    )
+  ).rows;
+  const sites = (
+    await db.query<{ id: string; name: string }>("select id, name from public.app_submissions where kind = 'url' and status = 'approved' order by name")
+  ).rows;
+  // What a position can manage: built-in apps (manager powers inside the portal) and approved websites
+  // (recorded only, for the shared login later).
+  const choices = [
+    ...allApps()
+      .filter((a) => a.tier === "external" || Object.keys(a.collections).length > 0)
+      .map((a) => ({ ref: appRef(a.slug), name: a.name, site: a.tier === "external" })),
+    ...sites.map((x) => ({ ref: linkRef(x.id), name: x.name, site: true })),
+  ];
+  const nameOf = new Map(choices.map((c) => [c.ref, c.name]));
+  const posName = new Map(positions.map((p) => [p.id, p.name]));
+  const pending = holders.filter((h) => h.status === "pending");
+
+  return (
+    <div className="mt-4 space-y-6">
+      <section>
+        <h2 className="flex items-center gap-2 text-lg font-bold">
+          בקשות לתפקיד <span className="badge-warning">{pending.length}</span>
+        </h2>
+        {pending.length === 0 ? (
+          <p className="mt-2 flex items-center gap-2 rounded-card border border-dashed border-line-strong p-4 text-sm text-muted">
+            <Check className="size-4 text-success" aria-hidden="true" /> אין בקשות חדשות.
+          </p>
+        ) : null}
+        <ul className="mt-3 space-y-2">
+          {pending.map((h) => (
+            <li key={`${h.positionId}-${h.profileId}`} className="card animate-rise border-gold/30 p-4" data-testid="position-request">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Avatar name={h.name ?? h.email} url={null} size={42} />
+                  <div className="min-w-0">
+                    <p className="font-bold">
+                      {h.name ?? "(ללא שם)"} ← <span className="badge-accent">{positionLabel(posName.get(h.positionId) ?? "", h.companyName)}</span>
+                    </p>
+                    <p className="text-sm text-muted">
+                      <span dir="ltr">{h.email}</span> · {fmt(h.requestedAt)}
+                    </p>
+                    {h.reason ? <p className="mt-1 text-sm">&quot;{h.reason}&quot;</p> : null}
+                  </div>
+                </div>
+                <form action={A.approvePosition}>
+                  <input type="hidden" name="position" value={h.positionId} />
+                  <input type="hidden" name="user" value={h.profileId} />
+                  <button type="submit" className="btn">
+                    <Check className="size-4" aria-hidden="true" /> אישור
+                  </button>
+                </form>
+              </div>
+              <form action={A.rejectPosition} className="mt-2 flex flex-wrap gap-2">
+                <input type="hidden" name="position" value={h.positionId} />
+                <input type="hidden" name="user" value={h.profileId} />
+                <label className="sr-only" htmlFor={`rj-${h.positionId}-${h.profileId}`}>
+                  סיבת הדחייה
+                </label>
+                <input id={`rj-${h.positionId}-${h.profileId}`} name="note" maxLength={200} placeholder="סיבה (לא חובה, המבקש/ת יראו אותה)" className="field min-w-0 flex-1" />
+                <button type="submit" className="btn-secondary">
+                  <X className="size-4" aria-hidden="true" /> דחייה
+                </button>
+              </form>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-bold">התפקידים</h2>
+        <p className="text-sm text-muted">
+          בעל/ת תפקיד מאושר/ת מנהל/ת את האפליקציות שמסומנות לתפקיד, כמו &quot;מנהלי האפליקציה&quot;: תפקיד גדודי — את כל הרשומות בגדוד; תפקיד פלוגתי — רק את הרשומות של אנשי הפלוגה שאליה התפקיד רשום (הפלוגה של המבקש/ת ברגע הבקשה או המינוי). באתרים חיצוניים התפקיד רק נשמר — הוא יועבר לאתר כשתהיה התחברות משותפת.
+        </p>
+        {positions.map((p) => {
+          const held = holders.filter((h) => h.positionId === p.id && h.status === "approved");
+          return (
+            <div key={p.id} className="card" data-testid="position-card">
+              <details>
+                <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2">
+                  <span className="text-base font-bold">{p.name}</span>
+                  <span className="badge-hidden">{POSITION_SCOPE_LABEL[p.scope]}</span>
+                  <span className="text-sm text-muted">{p.apps.map((r) => nameOf.get(r) ?? "(הוסר)").join(" · ") || "בלי אפליקציות"}</span>
+                  <span className="ms-auto text-xs text-subtle">עריכה</span>
+                </summary>
+                <form action={A.updatePosition} className="mt-3 grid gap-2 border-t border-line pt-3">
+                  <input type="hidden" name="position" value={p.id} />
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="label mt-0">שם</span>
+                      <input name="name" defaultValue={p.name} required maxLength={30} className="field" />
+                    </label>
+                    <label className="block">
+                      <span className="label mt-0">תיאור</span>
+                      <input name="description" defaultValue={p.description} maxLength={200} className="field" />
+                    </label>
+                    <label className="block sm:col-span-2">
+                      <span className="label mt-0">רמה</span>
+                      <select name="scope" defaultValue={p.scope} className="field">
+                        <option value="company">פלוגתי — כל מחזיק/ה רשום/ה לפלוגה שלו/ה ומנהל/ת רק אותה</option>
+                        <option value="battalion">גדודי — מנהל/ת את כל הגדוד</option>
+                      </select>
+                    </label>
+                  </div>
+                  <fieldset>
+                    <legend className="label mt-0">מנהל/ת את</legend>
+                    <div className="flex flex-wrap gap-2">
+                      {choices.map((c) => (
+                        <label key={c.ref} className="chip flex min-h-11 cursor-pointer items-center gap-2">
+                          <input type="checkbox" name="apps" value={c.ref} defaultChecked={p.apps.includes(c.ref)} className="size-4" />
+                          {c.name}
+                          {c.site ? <span className="text-xs text-subtle">(אתר)</span> : null}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="submit" className="btn">
+                      שמירה
+                    </button>
+                  </div>
+                </form>
+                <form action={A.deletePosition} className="mt-2">
+                  <input type="hidden" name="position" value={p.id} />
+                  <button type="submit" className="btn-ghost text-danger">
+                    <Trash2 className="size-4" aria-hidden="true" /> מחיקת התפקיד (וכל מי שמחזיק בו)
+                  </button>
+                </form>
+              </details>
+
+              <div className="mt-3 border-t border-line pt-3">
+                <p className="text-sm font-semibold">מחזיקים בתפקיד</p>
+                {held.length === 0 ? <p className="text-sm text-muted">אף אחד עדיין.</p> : null}
+                <ul className="mt-2 flex flex-wrap gap-2">
+                  {held.map((h) => (
+                    <li key={h.profileId}>
+                      <form action={A.removePositionHolder} className="chip flex items-center gap-1.5">
+                        <input type="hidden" name="position" value={p.id} />
+                        <input type="hidden" name="user" value={h.profileId} />
+                        {h.name ?? h.email}
+                        {p.scope === "company" ? <span className="text-xs text-muted">({h.companyName ?? "ללא פלוגה — לא מנהל/ת כלום"})</span> : null}
+                        <button type="submit" className="text-muted hover:text-danger" aria-label={`הסרת ${h.name ?? ""} מהתפקיד ${p.name}`}>
+                          <X className="size-3.5" aria-hidden="true" />
+                        </button>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+                <form action={A.assignPosition} className="mt-2 flex flex-wrap items-center gap-2">
+                  <input type="hidden" name="position" value={p.id} />
+                  <label className="sr-only" htmlFor={`as-${p.id}`}>
+                    מינוי ישיר ל{p.name}
+                    {p.scope === "company" ? " (לפלוגה של המשתמש/ת)" : ""}
+                  </label>
+                  <select id={`as-${p.id}`} name="user" defaultValue="" className="field w-auto max-w-full">
+                    <option value="" disabled>
+                      מינוי ישיר…
+                    </option>
+                    {people.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.full_name ?? u.email}
+                      </option>
+                    ))}
+                  </select>
+                  <button className="btn-secondary" type="submit">
+                    <Plus className="size-4" aria-hidden="true" /> מינוי
+                  </button>
+                </form>
+              </div>
+            </div>
+          );
+        })}
+        <form action={A.createPosition} className="card flex flex-wrap items-end gap-2 border-dashed">
+          <label className="min-w-0 flex-1">
+            <span className="label mt-0">תפקיד חדש</span>
+            <input name="name" required maxLength={30} className="field" placeholder='למשל: קמב"ץ' />
+          </label>
+          <label className="min-w-0 flex-[2]">
+            <span className="label mt-0">תיאור</span>
+            <input name="description" maxLength={200} className="field" placeholder="מה התפקיד מנהל" />
+          </label>
+          <label className="min-w-0">
+            <span className="label mt-0">רמה</span>
+            <select name="scope" defaultValue="company" className="field">
+              <option value="company">פלוגתי</option>
+              <option value="battalion">גדודי</option>
+            </select>
+          </label>
+          <button className="btn" type="submit">
+            <Plus className="size-4" aria-hidden="true" /> הוספה
+          </button>
+        </form>
+      </section>
     </div>
   );
 }

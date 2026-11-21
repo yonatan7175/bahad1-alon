@@ -1,5 +1,6 @@
 import "server-only";
 import type { Db } from "./db-core";
+import { HELD_POSITIONS_SQL } from "./positions";
 
 export interface Person {
   id: string;
@@ -13,16 +14,19 @@ export interface Person {
   phone: string | null;
   email: string | null;
   since: Date | null;
+  /** Approved positions (תפקידים), e.g. ['קל"פ · פלוגה א'', 'קל"ג'] — public to everyone signed in. */
+  positions: string[];
 }
 
 const SELECT = `select p.id, coalesce(p.full_name, '') as name, p.avatar_url, p.role, c.name as company, pl.name as platoon, p.company_id,
-       case when p.show_phone then p.phone end as phone, case when p.show_email then p.email end as email, p.approved_at
+       case when p.show_phone then p.phone end as phone, case when p.show_email then p.email end as email, p.approved_at,
+       ${HELD_POSITIONS_SQL} as positions
   from public.profiles p
   left join public.companies c on c.id = p.company_id
   left join public.platoons pl on pl.id = p.platoon_id
  where p.status = 'approved'`;
 
-type Row = { id: string; name: string; avatar_url: string | null; role: Person["role"]; company: string | null; platoon: string | null; company_id: string | null; phone: string | null; email: string | null; approved_at: Date | null };
+type Row = { id: string; name: string; avatar_url: string | null; role: Person["role"]; company: string | null; platoon: string | null; company_id: string | null; phone: string | null; email: string | null; approved_at: Date | null; positions: string[] | null };
 const toPerson = (r: Row): Person => ({
   id: r.id,
   name: r.name,
@@ -34,6 +38,7 @@ const toPerson = (r: Row): Person => ({
   phone: r.phone,
   email: r.email,
   since: r.approved_at,
+  positions: r.positions ?? [],
 });
 
 /** Approved users only; hidden phone/email come back as null (never sent to the browser). */

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bell, ChevronLeft, DoorOpen, Palette, Phone, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Bell, ChevronLeft, DoorOpen, Palette, Phone, ShieldCheck } from "lucide-react";
 import { requireApproved } from "@/platform/auth/session";
 import { getDb } from "@/platform/server/db";
 import { loadOverrides, visibleApps } from "@/platform/server/registry";
@@ -14,6 +14,8 @@ import { NotificationsToggle } from "./notifications";
 import { PhoneForm } from "./phone-form";
 import { RoomForm } from "./room-form";
 import { PrivacyToggles } from "./privacy-toggles";
+import { MyPositionsList } from "../roles/positions-ui";
+import { myPositions, positionLabel } from "@/platform/server/positions";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = { title: "הפרופיל שלי" };
@@ -33,7 +35,9 @@ function Section({ icon, title, children }: { icon: ReactNode; title: string; ch
 export default async function ProfilePage() {
   const session = await requireApproved("/profile");
   const p = session.profile;
-  const contactApps = visibleApps(p.role, await loadOverrides(await getDb()))
+  const db = await getDb();
+  const positions = await myPositions(db, p.id);
+  const contactApps = visibleApps(p.role, await loadOverrides(db))
     .map((x) => x.app)
     .filter((a) => a.effectiveScopes.includes("contact"));
   const unit = [p.company_name, p.platoon_name, p.room ? `חדר ${p.room}` : null].filter(Boolean).join(" · ") || "ללא יחידה";
@@ -49,6 +53,13 @@ export default async function ProfilePage() {
               <h1 className="truncate text-2xl font-extrabold">{p.full_name}</h1>
               <p className="mt-1 flex flex-wrap items-center justify-center gap-2 text-sm text-muted sm:justify-start">
                 <span className="badge-accent">{ROLE_LABEL[p.role]}</span>
+                {positions
+                  .filter((x) => x.status === "approved")
+                  .map((x) => (
+                    <span key={x.id} className="badge-accent">
+                      {positionLabel(x.name, x.companyName)}
+                    </span>
+                  ))}
                 <span>{unit}</span>
               </p>
               <p className="mt-1 truncate text-sm text-subtle" dir="ltr">
@@ -66,6 +77,13 @@ export default async function ProfilePage() {
 
           <Section icon={<DoorOpen aria-hidden="true" />} title="חדר במגורים">
             <RoomForm room={p.room ?? ""} />
+          </Section>
+
+          <Section icon={<BadgeCheck aria-hidden="true" />} title="תפקידים">
+            <MyPositionsList positions={positions} />
+            <Link href="/roles" className="btn-secondary mt-3 w-full sm:w-auto">
+              בקשה לתפקיד
+            </Link>
           </Section>
 
           <Section icon={<Bell aria-hidden="true" />} title="התראות במכשיר הזה">

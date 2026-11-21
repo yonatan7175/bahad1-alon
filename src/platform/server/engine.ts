@@ -10,6 +10,7 @@ import type { Db } from "./db-core";
 import { canUseApp, effectiveStatus, getApp, loadOverride } from "./registry";
 import { canCreate, canRead, canWrite, moderationScope, readVisibilitySql, type Actor } from "./rules";
 import { getPerson } from "./directory";
+import { appManagement } from "./positions";
 
 import { LIMITS } from "../limits";
 export { LIMITS };
@@ -101,12 +102,14 @@ async function loadCtx(db: Db, c: CallContext): Promise<Ctx> {
   if (!profile.last_seen_at || Date.now() - new Date(profile.last_seen_at).getTime() > 3600_000) {
     await db.query("update public.profiles set last_seen_at = now() where id = $1", [profile.id]);
   }
-  const { rows: mgr } = await db.query("select 1 from public.app_managers where app_slug = $1 and profile_id = $2", [app.slug, profile.id]);
+  // App manager = listed in app_managers, or holds an approved position (תפקיד) that manages this app:
+  // גדודי → the whole app; פלוגתי → records of people in that company only.
+  const mgmt = await appManagement(db, profile.id, app.slug);
   return {
     db,
     profile,
     app,
-    actor: { id: profile.id, role: profile.role, companyId: profile.company_id, platoonId: profile.platoon_id, appManager: mgr.length > 0 },
+    actor: { id: profile.id, role: profile.role, companyId: profile.company_id, platoonId: profile.platoon_id, appManager: mgmt.all, managerCompanyIds: mgmt.companies },
   };
 }
 
@@ -259,7 +262,7 @@ function me(ctx: Ctx): Me {
   const s = ctx.app.effectiveScopes;
   if (s.includes("role")) {
     out.role = p.role;
-    out.manager = ctx.actor.role === "admin" || !!ctx.actor.appManager;
+    out.manager = ctx.actor.role === "admin" || !!ctx.actor.appManager || !!ctx.actor.managerCompanyIds?.length;
   }
   if (s.includes("unit")) {
     out.room = p.room;

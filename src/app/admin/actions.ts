@@ -10,6 +10,7 @@ import { audit } from "@/platform/server/audit";
 import { commandersCanApprove } from "@/platform/server/config";
 import { getApp } from "@/platform/server/registry";
 import { validHebrewName } from "@/lib/validate";
+import * as P from "@/platform/server/positions";
 
 const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -283,4 +284,49 @@ export async function removeAppManager(form: FormData) {
   await db.query("delete from public.app_managers where app_slug = $1 and profile_id = $2", [slug, user]);
   await audit(db, s.profile.id, "app.manager.remove", user, { app: slug });
   back("apps", { ok: "ההרשאה הוסרה" });
+}
+
+// ── positions (תפקידים): requests, holders, and the list itself (admins only) ──
+
+async function positionOp(op: (db: Awaited<ReturnType<typeof getDb>>, adminId: string) => Promise<unknown>, ok: string): Promise<never> {
+  const s = await requireAdminAction();
+  try {
+    await op(await getDb(), s.profile.id);
+  } catch (e) {
+    if (e instanceof P.PositionError) back("positions", { error: e.message });
+    throw e;
+  }
+  back("positions", { ok });
+}
+
+const str = (form: FormData, k: string) => String(form.get(k) ?? "");
+
+export async function approvePosition(form: FormData) {
+  await positionOp((db, me) => P.decidePosition(db, me, str(form, "position"), str(form, "user"), "approve"), "הבקשה אושרה");
+}
+
+export async function rejectPosition(form: FormData) {
+  await positionOp((db, me) => P.decidePosition(db, me, str(form, "position"), str(form, "user"), "reject", str(form, "note")), "הבקשה נדחתה");
+}
+
+export async function assignPosition(form: FormData) {
+  if (!uuidRe.test(str(form, "user"))) back("positions", { error: "יש לבחור משתמש" });
+  await positionOp((db, me) => P.assignPosition(db, me, str(form, "position"), str(form, "user")), "התפקיד ניתן");
+}
+
+export async function removePositionHolder(form: FormData) {
+  await positionOp((db, me) => P.removeHolder(db, me, str(form, "position"), str(form, "user")), "התפקיד הוסר");
+}
+
+export async function createPosition(form: FormData) {
+  await positionOp((db, me) => P.createPosition(db, me, str(form, "name"), str(form, "description"), str(form, "scope")), "התפקיד נוסף");
+}
+
+export async function updatePosition(form: FormData) {
+  const apps = form.getAll("apps").map(String);
+  await positionOp((db, me) => P.updatePosition(db, me, str(form, "position"), str(form, "name"), str(form, "description"), apps, str(form, "scope")), "התפקיד עודכן");
+}
+
+export async function deletePosition(form: FormData) {
+  await positionOp((db, me) => P.deletePosition(db, me, str(form, "position")), "התפקיד נמחק");
 }

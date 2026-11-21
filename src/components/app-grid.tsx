@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ExternalLink, LayoutGrid, Lightbulb, PlusCircle, Search, SearchX, X } from "lucide-react";
+import { BadgeCheck, ExternalLink, LayoutGrid, Lightbulb, PlusCircle, Search, SearchX, X } from "lucide-react";
 import { matchesQuery } from "@/lib/hebrew";
 import { Ribbon, SchoolBadge } from "./brand";
 
@@ -158,7 +158,16 @@ export function AppGrid({
         </ul>
       )}
 
-      <div className="mt-8 grid gap-3 sm:grid-cols-2">
+      <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Link href="/roles" className="group flex items-center gap-4 rounded-card border border-dashed border-line-strong bg-bg-elevated p-4 transition-colors hover:border-accent hover:bg-accent-soft/40" data-testid="roles-link">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-accent">
+            <BadgeCheck className="size-6" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">יש לך תפקיד?</span>
+            <span className="block text-sm text-muted">בקשה לתפקיד — אחרי אישור מנהל הוא יופיע ליד השם שלך.</span>
+          </span>
+        </Link>
         <Link href="/a/add-app" className="group flex items-center gap-4 rounded-card border border-dashed border-line-strong bg-bg-elevated p-4 transition-colors hover:border-accent hover:bg-accent-soft/40">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-accent">
             <PlusCircle className="size-6" aria-hidden="true" />

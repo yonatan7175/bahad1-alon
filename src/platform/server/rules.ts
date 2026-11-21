@@ -9,8 +9,13 @@ export interface Actor {
   role: Role;
   companyId: string | null;
   platoonId: string | null;
-  /** Manager of THIS app (public.app_managers): moderates its collections battalion-wide, like an admin. */
+  /** Manager of THIS app (public.app_managers, or an approved position that manages it): moderates its collections battalion-wide, like an admin. */
   appManager?: boolean;
+  /**
+   * Companies whose records the actor moderates in THIS app through a פלוגתי position (e.g. קל"פ of
+   * פלוגה א'). Like appManager, but only for records owned by people in these companies.
+   */
+  managerCompanyIds?: string[];
 }
 
 export interface RecordOwnerInfo {
@@ -49,11 +54,17 @@ function sameUnit(a: string | null, b: string | null): boolean {
   return a !== null && b !== null && a === b;
 }
 
+/** Is the record's owner in a company the actor manages through a פלוגתי position? */
+function inManagedCompany(actor: Actor, rule: CollectionRule, rec: RecordOwnerInfo): boolean {
+  return rule.moderate !== "none" && rec.ownerCompanyId !== null && !!actor.managerCompanyIds?.includes(rec.ownerCompanyId);
+}
+
 export function canRead(actor: Actor, rule: CollectionRule, rec: RecordOwnerInfo): boolean {
   if (rec.ownerId === actor.id) return true;
   const mod = moderationScope(actor, rule);
   if (mod === "all") return true;
   if (mod === "company" && sameUnit(rec.ownerCompanyId, actor.companyId)) return true;
+  if (inManagedCompany(actor, rule, rec)) return true;
   switch (rule.read) {
     case "own":
       return false;
@@ -72,6 +83,7 @@ export function canWrite(actor: Actor, rule: CollectionRule, rec: RecordOwnerInf
   const mod = moderationScope(actor, rule);
   if (mod === "all") return true;
   if (mod === "company" && sameUnit(rec.ownerCompanyId, actor.companyId)) return true;
+  if (inManagedCompany(actor, rule, rec)) return true;
   return false;
 }
 
@@ -92,5 +104,6 @@ export function readVisibilitySql(actor: Actor, rule: CollectionRule, params: un
   const companyVisible = (mod === "company" || rule.read === "company") && actor.companyId;
   if (companyVisible) parts.push(`o.company_id = ${p(actor.companyId)}::uuid`);
   if (rule.read === "platoon" && actor.platoonId) parts.push(`o.platoon_id = ${p(actor.platoonId)}::uuid`);
+  if (rule.moderate !== "none" && actor.managerCompanyIds?.length) parts.push(`o.company_id = any(${p(actor.managerCompanyIds)}::uuid[])`);
   return `(${parts.join(" or ")})`;
 }

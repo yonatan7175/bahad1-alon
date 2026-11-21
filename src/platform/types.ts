@@ -35,7 +35,7 @@ export interface Me {
   avatarUrl: string | null;
   /** scope "role" */
   role?: Role;
-  /** scope "role": true for admins and for managers of this app (they moderate its collections battalion-wide) */
+  /** scope "role": true for admins and for managers of this app (app managers and holders of a position that manages it; they moderate its collections battalion-wide) */
   manager?: boolean;
   /** scope "unit" */
   company?: UnitRef | null;

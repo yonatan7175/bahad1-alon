@@ -5,6 +5,7 @@ import type { Session } from "@/platform/auth/session";
 import { getDb } from "@/platform/server/db";
 import { commandersCanApprove } from "@/platform/server/config";
 import { openFeedbackCount } from "@/platform/server/feedback";
+import { pendingPositionCount } from "@/platform/server/positions";
 import { ROLE_LABEL } from "@/lib/site";
 import { Ribbon, Wordmark } from "./brand";
 import { UserMenu } from "./user-menu";
@@ -22,6 +23,7 @@ export async function PortalHeader({ session }: { session: Session }) {
       p.role === "admin" ? [] : [p.company_id],
     );
     pending = rows[0]?.n ?? 0;
+    if (p.role === "admin") pending += await pendingPositionCount(db); // requests for a position (תפקיד)
   }
   const feedback = p.role === "admin" ? await openFeedbackCount(db) : 0;
   const unit = [p.company_name, p.platoon_name].filter(Boolean).join(" · ");

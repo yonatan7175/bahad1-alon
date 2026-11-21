@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Building2, CalendarCheck, Mail, MessageCircle, Phone, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, BadgeCheck, Building2, CalendarCheck, Mail, MessageCircle, Phone, ShieldCheck, Users } from "lucide-react";
 import { requireApproved } from "@/platform/auth/session";
 import { getDb } from "@/platform/server/db";
 import { getPerson } from "@/platform/server/directory";
@@ -45,8 +45,13 @@ export default async function PersonPage(props: PageProps<"/people/[id]">) {
           <div className="flex flex-col items-center px-5 pb-6 text-center">
             <Avatar name={p.name} url={p.avatarUrl} size={92} className="relative z-10 -mt-12 ring-4" />
             <h1 className="mt-3 text-2xl font-extrabold">{p.name}</h1>
-            <p className="mt-1 flex items-center gap-2 text-sm text-muted">
+            <p className="mt-1 flex flex-wrap items-center justify-center gap-2 text-sm text-muted">
               <span className="badge-accent">{ROLE_LABEL[p.role]}</span>
+              {p.positions.map((x) => (
+                <span key={x} className="badge-accent">
+                  {x}
+                </span>
+              ))}
               {[p.company, p.platoon].filter(Boolean).join(" · ")}
             </p>
             {(p.phone || p.email) && !isMe ? (
@@ -72,9 +77,14 @@ export default async function PersonPage(props: PageProps<"/people/[id]">) {
         </div>
 
         <div className="list-group mt-4">
-          <Row icon={<ShieldCheck />} label="תפקיד">
+          <Row icon={<ShieldCheck />} label="סוג משתמש">
             {ROLE_LABEL[p.role]}
           </Row>
+          {p.positions.length ? (
+            <Row icon={<BadgeCheck />} label={p.positions.length > 1 ? "תפקידים" : "תפקיד"}>
+              {p.positions.join(" · ")}
+            </Row>
+          ) : null}
           <Row icon={<Building2 />} label="פלוגה">
             {p.company ?? "—"}
           </Row>
