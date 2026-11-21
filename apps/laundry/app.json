@@ -184,7 +184,59 @@
         },
         "additionalProperties": false
       }
+    },
+    "legacy": {
+      "read": "all",
+      "create": "admin",
+      "moderate": "admin",
+      "schema": {
+        "type": "object",
+        "required": [
+          "machine",
+          "day",
+          "from",
+          "to",
+          "name"
+        ],
+        "properties": {
+          "machine": {
+            "type": "string",
+            "enum": [
+              "w1",
+              "d1"
+            ]
+          },
+          "day": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "from": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "description": "Real start time from the old calendar (not on the 40-minute grid)"
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^(([01]\\d|2[0-3]):[0-5]\\d|24:00)$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "phones": {
+            "type": "array",
+            "maxItems": 2,
+            "items": {
+              "type": "string",
+              "maxLength": 20,
+              "pattern": "^[0-9+][0-9 -]{6,19}$"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
     }
   },
-  "version": "4.0.0"
+  "version": "4.1.0"
 }

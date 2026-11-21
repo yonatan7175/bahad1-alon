@@ -4,6 +4,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, Users, Wind, Washi
 import { MACHINES, SLOTS, SLOT_MINUTES, type Kind, type Machine } from "./machines";
 import { addDays, israelDay, monthGrid, monthLabel, slotEnd, slotStart, weekDays } from "./time";
 import { groupSlots, isShared, slotState, type Laundry, type Rec } from "./data";
+import { legacyRange } from "./legacy";
 
 const ROW = 52; // px per 40-minute row (≥ 44px tap target)
 
@@ -267,6 +268,44 @@ export function CalendarGrid({
                 const broken = !!data.broken[m.id];
                 const base = "my-0.5 flex min-w-0 items-center justify-center rounded-[10px] px-1 text-[11px] font-semibold transition-all";
                 const range = `${m.label} ${time}–${slotEnd(time)}`;
+                const old = st.recs.length === 1 ? data.legacyOf(st.recs[0]) : null;
+                if (old) {
+                  // Held for bookings from the old calendar (real times, not on the grid) — see ./legacy.ts.
+                  const label = old.length
+                    ? `${range} תפוס — מהיומן הקודם: ${old.map((l) => `${l.data.name} ${legacyRange(l.data)}`).join(", ")}`
+                    : `${range} תפוס`;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => onSlot(m, time)}
+                      aria-label={label}
+                      data-testid="legacy-slot"
+                      className={`${base} ${past ? `${PAST} text-muted` : "bg-surface-3 text-fg"}`}
+                    >
+                      <span className="flex min-w-0 flex-col items-center leading-tight">
+                        {old.length === 1 ? (
+                          <>
+                            <span className="max-w-full truncate">{old[0].data.name}</span>
+                            <span className={`max-w-full truncate text-[10px] font-medium tabular-nums ${past ? "" : "text-subtle"}`} dir="ltr">
+                              {legacyRange(old[0].data)}
+                            </span>
+                          </>
+                        ) : old.length ? (
+                          <>
+                            <span className="max-w-full truncate">{old[0].data.name}</span>
+                            <span className="max-w-full truncate">
+                              {old[1].data.name}
+                              {old.length > 2 ? ` +${old.length - 2}` : ""}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="max-w-full truncate">{st.recs[0].owner.name}</span>
+                        )}
+                      </span>
+                    </button>
+                  );
+                }
                 if (st.recs.length) {
                   const own = !!st.mine;
                   const joinable = !own && st.left > 0 && !past && !broken && bookable;

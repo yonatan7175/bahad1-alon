@@ -7,7 +7,8 @@ import { BellRing, CalendarDays, Eye, ListChecks, MessageCircle, Phone, Search, 
 import { useBahad } from "@/platform/client";
 import { BOOK_DAYS_AHEAD, KIND_LABEL, REMINDER_MINUTES, SLOT_MINUTES, WEEKLY_LIMIT, machineById, type Kind, type Machine } from "./machines";
 import { addDays, dayLabel, israelDay, slotEnd, slotStart } from "./time";
-import { groupSlots, isShared, slotState, useLaundry, type Rec } from "./data";
+import { groupSlots, isShared, slotState, useLaundry, type LegacyRec, type Rec } from "./data";
+import { legacyRange } from "./legacy";
 import { CalendarGrid, KindSwitch, Legend, MonthPicker, WeekNav, type View } from "./calendar";
 import { PersonCard } from "./person-card";
 import { MyBookings } from "./mine";
@@ -344,24 +345,38 @@ export function LaundryApp() {
                       </span>
                     </Detail>
                     {mine ? (
-                      <Detail label="סוג">{isShared(mine) ? (others.length ? `בחלוקה עם ${others[0].owner.name}` : "בחלוקה — מקום לעוד אחד") : "כל המכונה"}</Detail>
+                      <Detail label="סוג">{isShared(mine) ? (others.length ? `בחלוקה עם ${data.nameOf(others[0])}` : "בחלוקה — מקום לעוד אחד") : "כל המכונה"}</Detail>
                     ) : null}
                   </div>
                   {st.recs.length === 0 ? <p className="mt-3 text-sm text-muted">המשבצת התפנתה.</p> : null}
                   {others.length ? (
                     <div className="mt-3 space-y-2">
                       <p className="section-title">{mine ? "מתחלק/ת איתך" : others.length > 1 ? "שוריין ע״י (בחלוקה)" : "שוריין ע״י"}</p>
-                      {others.map((r) => (
-                        <div key={r.id}>
-                          <Booker rec={r} />
-                          {data.canModerate ? (
-                            <button type="button" className="btn-danger mt-2 min-h-11 w-full" disabled={busy} onClick={() => run(() => data.cancel(r), others.length === 1 && !mine)}>
-                              <Trash2 className="size-4" aria-hidden="true" />
-                              פינוי {r.owner.name} (מפקד/ת)
-                            </button>
-                          ) : null}
-                        </div>
-                      ))}
+                      {others.map((r) => {
+                        const old = data.legacyOf(r);
+                        return (
+                          <div key={r.id} className="space-y-2">
+                            {old ? (
+                              <>
+                                {old.map((l) => (
+                                  <LegacyCard key={l.id} rec={l} />
+                                ))}
+                                <p className="text-xs text-muted">
+                                  {old.length > 1 ? "השתבצויות" : "השתבצות"} מהיומן הקודם, בשעות המקוריות — לכן כל המשבצת ({sheet.time}–{slotEnd(sheet.time)}) תפוסה.
+                                </p>
+                              </>
+                            ) : (
+                              <Booker rec={r} />
+                            )}
+                            {data.canModerate ? (
+                              <button type="button" className="btn-danger min-h-11 w-full" disabled={busy} onClick={() => run(() => data.cancel(r), others.length === 1 && !mine)}>
+                                <Trash2 className="size-4" aria-hidden="true" />
+                                {old ? "פינוי המשבצת (מנהל)" : `פינוי ${r.owner.name} (מפקד/ת)`}
+                              </button>
+                            ) : null}
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : null}
                   {mine && future ? (
@@ -454,6 +469,19 @@ const waNumber = (phone: string) => {
   return d.startsWith("972") ? d : `972${d.replace(/^0/, "")}`;
 };
 
+function ContactButtons({ phone }: { phone: string }) {
+  return (
+    <div className="mt-2 grid grid-cols-2 gap-2">
+      <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="btn-secondary min-h-11">
+        <Phone className="size-4 text-accent" aria-hidden="true" /> חיוג
+      </a>
+      <a href={`https://wa.me/${waNumber(phone)}`} target="_blank" rel="noopener noreferrer" className="btn-secondary min-h-11">
+        <MessageCircle className="size-4 text-accent" aria-hidden="true" /> וואטסאפ
+      </a>
+    </div>
+  );
+}
+
 function Booker({ rec }: { rec: Rec }) {
   if (!rec.data.phone) return <PersonCard id={rec.owner.id} fallbackName={rec.owner.name} />;
   return (
@@ -465,14 +493,33 @@ function Booker({ rec }: { rec: Rec }) {
       <p className="mt-0.5 text-base font-bold tabular-nums text-muted">
         <span dir="ltr">{rec.data.phone}</span>
       </p>
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <a href={`tel:${rec.data.phone.replace(/[^\d+]/g, "")}`} className="btn-secondary min-h-11">
-          <Phone className="size-4 text-accent" aria-hidden="true" /> חיוג
-        </a>
-        <a href={`https://wa.me/${waNumber(rec.data.phone)}`} target="_blank" rel="noopener noreferrer" className="btn-secondary min-h-11">
-          <MessageCircle className="size-4 text-accent" aria-hidden="true" /> וואטסאפ
-        </a>
-      </div>
+      <ContactButtons phone={rec.data.phone} />
+    </div>
+  );
+}
+
+/** A booking carried over from the old calendar: its name, REAL time and phone(s). */
+function LegacyCard({ rec }: { rec: LegacyRec }) {
+  const l = rec.data;
+  return (
+    <div className="rounded-card border border-line bg-bg-elevated p-4" data-testid="legacy-card">
+      <p className="flex flex-wrap items-center gap-2 text-lg font-extrabold">
+        {l.name}
+        <span className="badge">מהיומן הקודם</span>
+      </p>
+      <p className="mt-0.5 text-sm font-semibold text-muted">
+        <span className="tabular-nums" dir="ltr">
+          {legacyRange(l)}
+        </span>
+      </p>
+      {(l.phones ?? []).map((ph) => (
+        <div key={ph} className="mt-2">
+          <p className="text-base font-bold tabular-nums text-muted">
+            <span dir="ltr">{ph}</span>
+          </p>
+          <ContactButtons phone={ph} />
+        </div>
+      ))}
     </div>
   );
 }

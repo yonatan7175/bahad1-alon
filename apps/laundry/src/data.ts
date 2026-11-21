@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BahadError, useBahad, type BahadRecord, type Me } from "@/platform/client";
 import { KIND_LABEL, MACHINES, REMINDER_MINUTES, SLOTS, SLOT_SEATS, WEEKLY_LIMIT, machineById, type Kind, type Machine } from "./machines";
 import { dayLabel, israelDay, slotEnd, slotIso, slotStart, weekRange } from "./time";
+import { legacyInSlot, type Legacy } from "./legacy";
 
 /** phone: the booker's, saved with the booking so everyone sees how to reach whoever holds the slot.
  *  (The name always comes from the server — rec.owner.name — so it can't be faked.) */
@@ -35,6 +36,7 @@ export function groupSlots(list: Rec[] | undefined): Map<string, Rec[]> {
   }
   return map;
 }
+export type LegacyRec = BahadRecord<Legacy>;
 type Status = { machine: string; broken: boolean; note?: string };
 export type StatusRec = BahadRecord<Status>;
 
@@ -44,22 +46,27 @@ export function useLaundry() {
   const bahad = useBahad();
   const bookings = useMemo(() => bahad.data.collection<Booking>("bookings"), [bahad]);
   const statuses = useMemo(() => bahad.data.collection<Status>("machine_status"), [bahad]);
+  const legacy = useMemo(() => bahad.data.collection<Legacy>("legacy"), [bahad]);
   const [me, setMe] = useState<Me | null>(null);
   const [byDay, setByDay] = useState<Record<string, Rec[]>>({});
+  /** Bookings from the old calendar, per day (see ./legacy.ts). */
+  const [legacyByDay, setLegacyByDay] = useState<Record<string, LegacyRec[]>>({});
   const [mine, setMine] = useState<Rec[] | null>(null);
   const [broken, setBroken] = useState<Record<string, StatusRec>>({});
   const loaded = useRef(new Set<string>());
 
   const loadDay = useCallback(
     async (day: string) => {
-      const [w, d] = await Promise.all([
+      const [w, d, old] = await Promise.all([
         bookings.list({ where: { day, kind: "washer" }, limit: 200 }),
         bookings.list({ where: { day, kind: "dryer" }, limit: 200 }),
+        legacy.list({ where: { day }, limit: 200 }).catch(() => [] as LegacyRec[]),
       ]);
       loaded.current.add(day);
+      setLegacyByDay((prev) => ({ ...prev, [day]: old }));
       setByDay((prev) => ({ ...prev, [day]: [...w, ...d].filter(valid) }));
     },
-    [bookings],
+    [bookings, legacy],
   );
   const loadMine = useCallback(async () => {
     setMine((await bookings.list({ mine: true, limit: 200 })).filter(valid));
@@ -83,11 +90,30 @@ export function useLaundry() {
     };
     const stop1 = bookings.subscribe(refresh);
     const stop2 = statuses.subscribe(() => void loadStatus().catch(() => {}));
+    const stop3 = legacy.subscribe(refresh);
     return () => {
       stop1();
       stop2();
+      stop3();
     };
-  }, [bahad, bookings, statuses, loadDay, loadMine, loadStatus, toast]);
+  }, [bahad, bookings, statuses, legacy, loadDay, loadMine, loadStatus, toast]);
+
+  /** The system profile that owns the carried-over bookings (= the owner of the "legacy" records). */
+  const legacyOwners = useMemo(() => new Set(Object.values(legacyByDay).flatMap((l) => l.map((r) => r.owner.id))), [legacyByDay]);
+  /** For a booking that holds a slot for the old calendar: the old bookings inside that slot. Otherwise null. */
+  const legacyOf = useCallback(
+    (rec: Rec): LegacyRec[] | null =>
+      legacyOwners.has(rec.owner.id) ? legacyInSlot(legacyByDay[rec.data.day] ?? [], rec.data.machine, rec.data.day, rec.data.time) : null,
+    [legacyOwners, legacyByDay],
+  );
+  /** Who holds a booking, for display: the old calendar's names for carried-over slots, else the account name. */
+  const nameOf = useCallback(
+    (rec: Rec): string => {
+      const old = legacyOf(rec);
+      return old && old.length ? old.map((l) => l.data.name).join(" · ") : rec.owner.name;
+    },
+    [legacyOf],
+  );
 
   /** How many bookings of `kind` I have in the week containing `day`. */
   const usedInWeek = useCallback(
@@ -189,6 +215,8 @@ export function useLaundry() {
     me,
     canModerate: me?.role === "commander" || me?.role === "admin",
     byDay,
+    legacyOf,
+    nameOf,
     mine,
     broken,
     loadDay,
