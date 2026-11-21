@@ -146,6 +146,14 @@ test("laundry: calendar booking, whole or shared, live for others, weekly limit,
   await expect(dialog.getByRole("radio", { name: /כל המכונה/ })).toHaveAttribute("aria-checked", "true");
   await dialog.getByRole("button", { name: "שריון", exact: true }).click();
   await expect(A.page.getByRole("button", { name: "מכונת כביסה 20:00–20:40 השריון שלי", exact: true })).toBeVisible();
+  // add to my calendar: a Google Calendar link for the real slot, and a .ics download
+  await A.page.getByRole("button", { name: "מכונת כביסה 20:00–20:40 השריון שלי", exact: true }).click();
+  const gcal = new URL((await dialog.getByTestId("add-google-calendar").getAttribute("href"))!);
+  expect(gcal.origin).toBe("https://calendar.google.com");
+  expect(gcal.searchParams.get("dates")).toMatch(/^\d{8}T1[78]0000Z\/\d{8}T1[78]4000Z$/); // 20:00 Israel = 18:00Z / 17:00Z
+  const [ics] = await Promise.all([A.page.waitForEvent("download"), dialog.getByTestId("add-ics").click()]);
+  expect(ics.suggestedFilename()).toMatch(/^laundry-\d{4}-\d{2}-\d{2}-2000\.ics$/);
+  await A.page.keyboard.press("Escape");
   // B sees it taken, live — with the booker's name (and phone, when the profile has one) on the slot; no joining a whole booking
   const taken = B.page.getByRole("button", { name: /מכונת כביסה 20:00–20:40 תפוס ע"י ישראל ישראלי/ });
   await expect(taken).toBeVisible({ timeout: 15_000 });

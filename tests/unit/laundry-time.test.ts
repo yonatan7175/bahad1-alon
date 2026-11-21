@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import laundryManifest from "../../apps/laundry/app.json";
 import { dayLabel, israelDay, israelHour, israelIso, israelOffsetMinutes, israelTime, nextDays } from "@apps/laundry/src/time";
+import { bookingEvent, googleCalendarUrl, icsFile } from "@apps/laundry/src/add-to-calendar";
 
 describe("laundry Israel-time helpers", () => {
   it("knows winter (+2) and summer (+3) offsets", () => {
@@ -96,5 +97,28 @@ describe("laundry calendar navigation helpers", () => {
   });
   it("monthLabel is Hebrew", () => {
     expect(monthLabel("2026-11-18")).toBe("נובמבר 2026");
+  });
+});
+
+describe("laundry add-to-calendar", () => {
+  const ev = bookingEvent({ machine: "w1", day: "2026-11-20", time: "18:40" }, "abc", "בחלוקה עם דנה, ועוד; טקסט ארוך מאוד שצריך קיפול שורות בקובץ", "https://x.test/a/laundry");
+  it("uses the real 40-minute slot in UTC", () => {
+    expect(ev.start.toISOString()).toBe("2026-11-20T16:40:00.000Z");
+    expect(ev.end.toISOString()).toBe("2026-11-20T17:20:00.000Z");
+    const u = new URL(googleCalendarUrl(ev));
+    expect(u.origin).toBe("https://calendar.google.com");
+    expect(u.searchParams.get("dates")).toBe("20261120T164000Z/20261120T172000Z");
+    expect(u.searchParams.get("text")).toBe("מכונת כביסה — שריון");
+  });
+  it("writes a valid, folded, escaped .ics", () => {
+    const ics = icsFile(ev, new Date("2026-11-19T10:00:00Z"));
+    expect(ics.startsWith("BEGIN:VCALENDAR\r\n")).toBe(true);
+    expect(ics).toContain("DTSTART:20261120T164000Z\r\n");
+    expect(ics).toContain("TRIGGER:-PT10M");
+    const enc = new TextEncoder();
+    for (const line of ics.split("\r\n")) expect(enc.encode(line).length).toBeLessThanOrEqual(75);
+    const unfolded = ics.replace(/\r\n /g, "");
+    expect(unfolded).toContain("DESCRIPTION:בחלוקה עם דנה\\, ועוד\\; טקסט");
+    expect(unfolded).toContain("\\nלו\"ז מכונות כביסה: https://x.test/a/laundry");
   });
 });

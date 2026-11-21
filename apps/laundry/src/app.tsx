@@ -3,7 +3,7 @@
 // A booking takes the whole machine or shares the slot with one more person. Every booked slot shows who and their phone.
 // Tabs: יומן (calendar) · שלי (my bookings + weekly quota) · חיפוש (find a free slot).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BellRing, CalendarDays, Eye, ListChecks, MessageCircle, Phone, Search, Trash2, User, Users, Wrench } from "lucide-react";
+import { BellRing, CalendarDays, CalendarPlus, Download, Eye, ListChecks, MessageCircle, Phone, Search, Trash2, User, Users, Wrench } from "lucide-react";
 import { useBahad } from "@/platform/client";
 import { BOOK_DAYS_AHEAD, KIND_LABEL, REMINDER_MINUTES, SLOT_MINUTES, WEEKLY_LIMIT, machineById, type Kind, type Machine } from "./machines";
 import { addDays, dayLabel, israelDay, slotEnd, slotStart } from "./time";
@@ -15,6 +15,7 @@ import { MyBookings } from "./mine";
 import { Finder, type FreeSlot } from "./finder";
 import { Detail, Sheet } from "./sheet";
 import { NowStrip } from "./now-strip";
+import { bookingEvent, googleCalendarUrl, icsFile } from "./add-to-calendar";
 
 type Tab = "calendar" | "mine" | "find";
 type SheetState =
@@ -392,6 +393,12 @@ export function LaundryApp() {
                       </button>
                     )
                   ) : null}
+                  {mine && future ? (
+                    <AddToCalendar
+                      rec={mine}
+                      note={isShared(mine) ? (others.length ? `בחלוקה עם ${data.nameOf(others[0])}` : "בחלוקה") : "כל המכונה"}
+                    />
+                  ) : null}
                   {mine ? (
                     <button type="button" className="btn-danger mt-3 h-12 w-full" disabled={busy} onClick={() => run(() => data.cancel(mine), true)}>
                       <Trash2 className="size-4" aria-hidden="true" />
@@ -459,6 +466,41 @@ export function LaundryApp() {
       </p>
       <span className="sr-only">{israelDay(now)}</span>
     </main>
+  );
+}
+
+/** "Add to my calendar": Google Calendar (opens in the signed-in Google account) or a .ics file (iPhone / Outlook). */
+function AddToCalendar({ rec, note }: { rec: Rec; note: string }) {
+  // Rendered only inside an opened sheet (client side), so window is defined.
+  const event = () => bookingEvent(rec.data, rec.id, note, `${window.location.origin}/a/laundry`);
+  const download = () => {
+    const url = URL.createObjectURL(new Blob([icsFile(event())], { type: "text/calendar;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `laundry-${rec.data.day}-${rec.data.time.replace(":", "")}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  };
+  return (
+    <div className="mt-4">
+      <p className="section-title">הוספה ליומן שלי</p>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <a
+          href={googleCalendarUrl(event())}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-secondary min-h-11"
+          data-testid="add-google-calendar"
+        >
+          <CalendarPlus className="size-4 text-accent" aria-hidden="true" /> יומן Google
+        </a>
+        <button type="button" className="btn-secondary min-h-11" onClick={download} data-testid="add-ics">
+          <Download className="size-4 text-accent" aria-hidden="true" /> אייפון / אחר
+        </button>
+      </div>
+    </div>
   );
 }
 
