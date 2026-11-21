@@ -21,11 +21,11 @@ describe("profile validation", () => {
   });
 });
 
-describe("normalizeRoom (living quarters: floors 2–4, rooms 37–56)", () => {
+describe("normalizeRoom (living quarters: floors 2–4, rooms 37–60)", () => {
   it("accepts rooms of the building", () => {
-    for (const r of ["237", "256", "341", "437", "456", " 2 4 1 "]) expect(normalizeRoom(r)).toBe(r.replace(/\s/g, ""));
+    for (const r of ["237", "256", "341", "437", "456", "257", "360", "460", " 2 4 1 "]) expect(normalizeRoom(r)).toBe(r.replace(/\s/g, ""));
   });
   it("rejects anything else", () => {
-    for (const r of ["", "236", "257", "137", "537", "2410", "24a", "ב-7", "3/12"]) expect(normalizeRoom(r)).toBeNull();
+    for (const r of ["", "236", "261", "461", "137", "537", "2410", "24a", "ב-7", "3/12"]) expect(normalizeRoom(r)).toBeNull();
   });
 });

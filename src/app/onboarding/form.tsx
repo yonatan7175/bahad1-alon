@@ -86,8 +86,8 @@ export function OnboardingForm({
         required
         maxLength={3}
         inputMode="numeric"
-        pattern="[2-4](3[7-9]|4[0-9]|5[0-6])"
-        title="קומות 2–4, חדרים 37–56 (למשל 241)"
+        pattern="[2-4](3[7-9]|4[0-9]|5[0-9]|60)"
+        title="קומות 2–4, חדרים 37–60 (למשל 241)"
         dir="ltr"
         placeholder="241"
         value={room}

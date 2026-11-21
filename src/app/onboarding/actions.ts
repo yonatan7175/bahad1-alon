@@ -17,7 +17,7 @@ export async function saveOnboarding(_prev: OnboardingState, form: FormData): Pr
   const name = validHebrewName(String(form.get("name") ?? ""));
   if (!name) return { error: "יש להזין שם מלא בעברית (2–40 תווים)." };
   const room = normalizeRoom(String(form.get("room") ?? ""));
-  if (!room) return { error: "יש להזין מספר חדר במגורים: קומות 2–4, חדרים 37–56 (למשל 241)." };
+  if (!room) return { error: "יש להזין מספר חדר במגורים: קומות 2–4, חדרים 37–60 (למשל 241)." };
   const companyId = String(form.get("company") ?? "");
   const team = teamPlatoonName(String(form.get("team") ?? ""));
   if (!team) return { error: "יש להזין מספר צוות (1–30)." };

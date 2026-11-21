@@ -28,7 +28,7 @@ export async function saveRoom(_prev: { error?: string; ok?: boolean }, form: Fo
   const s = await getSession();
   if (!s || s.profile.status !== "approved") return { error: "צריך להתחבר מחדש." };
   const room = normalizeRoom(String(form.get("room") ?? ""));
-  if (!room) return { error: "חדר לא קיים במגורים (קומות 2–4, חדרים 37–56, למשל 241)." };
+  if (!room) return { error: "חדר לא קיים במגורים (קומות 2–4, חדרים 37–60, למשל 241)." };
   await (await getDb()).query("update public.profiles set room = $2 where id = $1", [s.profile.id, room]);
   revalidatePath("/profile");
   revalidatePath("/a/dorm");
