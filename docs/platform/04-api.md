@@ -5,7 +5,7 @@
 - **אפליקציה מלאה:** `import { bahad, useBahad } from "@/platform/client"` בקומפוננטות לקוח, ו-`import { platformFor } from "@/platform/server"` בקוד שרת.
 
 כל הפונקציות אסינכרוניות (`async`). כל שגיאה היא `BahadError { code, message }`, כאשר `code` הוא אחד מ:
-`unauthorized`, `forbidden`, `not_found`, `invalid`, `rate_limited`, `app_disabled`, `conflict` (נתפס ע"י מישהו אחר — `unique`).
+`unauthorized`, `forbidden`, `not_found`, `invalid`, `rate_limited`, `app_disabled`, `conflict` (נתפס ע"י מישהו אחר — `unique` / `capacity`).
 
 ## עיון מהיר
 ```js

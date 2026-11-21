@@ -204,15 +204,11 @@
     color: var(--bg);
   }
   .badge,
-  .badge-beta,
   .badge-hidden,
   .badge-accent,
   .badge-danger,
   .badge-warning {
     @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold whitespace-nowrap;
-  }
-  .badge-beta {
-    @apply bg-gold-soft text-gold;
   }
   .badge-hidden {
     @apply bg-surface-3 text-muted;

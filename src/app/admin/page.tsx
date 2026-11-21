@@ -439,8 +439,8 @@ async function AppsTab({ db }: { db: Awaited<ReturnType<typeof getDb>> }) {
                     {a.name} <span className="text-xs text-muted" dir="ltr">/{a.slug} · v{a.version} · {a.tier}</span>
                   </p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm text-muted">
-                    <span className={eff === "disabled" ? "badge-danger" : eff === "hidden" ? "badge-hidden" : eff === "beta" ? "badge-beta" : "badge-accent"}>
-                      {({ live: "פעילה", beta: "בטא", hidden: "מוסתרת", disabled: "מושבתת" } as const)[eff]}
+                    <span className={eff === "disabled" ? "badge-danger" : eff === "hidden" ? "badge-hidden" : "badge-accent"}>
+                      {({ live: "פעילה", hidden: "מוסתרת", disabled: "מושבתת" } as const)[eff]}
                     </span>
                     {o ? <span>(עקיפת מנהל{o.reason ? `: ${o.reason}` : ""})</span> : null}
                   </p>

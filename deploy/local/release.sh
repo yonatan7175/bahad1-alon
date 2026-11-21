@@ -17,6 +17,15 @@ pnpm gen
 NODE_ENV=production BAHAD_DIST_DIR=.next-prod-build pnpm exec next build
 echo "▶ swapping in the new build"
 systemctl --user stop alon-prod.service || true
+# Back up the production database while nothing writes to it (migrations run on the next start). Keeps the last 5.
+DATA_DIR="$(sed -n 's/^BAHAD_PGLITE_DIR=//p' .env.production.local 2>/dev/null | tail -1)"
+if [[ -n "$DATA_DIR" && -d "$DATA_DIR" ]]; then
+  BACKUPS="$HOME/alon-backups"
+  mkdir -p "$BACKUPS"
+  cp -a "$DATA_DIR" "$BACKUPS/pglite-$(date +%Y%m%d-%H%M%S)"
+  ls -1d "$BACKUPS"/pglite-* | head -n -5 | xargs -r rm -rf
+  echo "▶ data backed up to $BACKUPS"
+fi
 rm -rf .next-prod && mv .next-prod-build .next-prod
 systemctl --user start alon-prod.service
 for _ in $(seq 30); do

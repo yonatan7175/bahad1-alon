@@ -6,6 +6,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { MOCK_COOKIE, SESSION_COOKIE } from "@/platform/auth/constants";
 import { REGISTRY } from "@/generated/registry";
+import { linkFrameOrigin } from "@/lib/embed";
 
 // Owner-approved outside sites (tier "external") may be framed ONLY on their own app page,
 // so no other page (e.g. a simple app's sandboxed frame) can navigate to them.
@@ -13,7 +14,8 @@ const EXTERNAL_ORIGIN_BY_PATH = new Map(
   REGISTRY.filter((a) => a.tier === "external" && a.url).map((a) => [`/a/${a.slug}`, new URL(a.url!).origin]),
 );
 function frameSrc(pathname: string): string {
-  const ext = EXTERNAL_ORIGIN_BY_PATH.get(pathname.replace(/\/$/, ""));
+  // Admin-approved websites ("הוספת אפליקציה"): /l/<id>/<host> may frame https://<host> only.
+  const ext = EXTERNAL_ORIGIN_BY_PATH.get(pathname.replace(/\/$/, "")) ?? linkFrameOrigin(pathname);
   return ext ? `'self' ${ext}` : "'self'";
 }
 

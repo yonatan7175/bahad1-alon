@@ -4,7 +4,7 @@ import type { RegistryApp } from "../manifest";
 import type { Role } from "../types";
 import type { Db } from "./db-core";
 
-export type EffectiveStatus = "live" | "beta" | "hidden" | "disabled";
+export type EffectiveStatus = "live" | "hidden" | "disabled";
 
 export interface Override {
   status: "hidden" | "disabled";

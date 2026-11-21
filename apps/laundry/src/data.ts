@@ -1,16 +1,40 @@
 "use client";
 // Data layer of the laundry app: bookings per day, my bookings, broken machines,
-// and the actions (book / cancel / mark broken). All rules (one person per slot,
-// 2 washes + 2 dries a week) are enforced by the server — see app.json "unique" / "quota".
+// and the actions (book / cancel / share / mark broken). All rules (a slot holds the whole machine for one
+// person or is shared by two, 3 washes + 3 dries a week) are enforced by the server — see app.json "capacity" / "quota".
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BahadError, useBahad, type BahadRecord, type Me } from "@/platform/client";
-import { KIND_LABEL, MACHINES, REMINDER_MINUTES, SLOTS, WEEKLY_LIMIT, machineById, type Kind, type Machine } from "./machines";
+import { KIND_LABEL, MACHINES, REMINDER_MINUTES, SLOTS, SLOT_SEATS, WEEKLY_LIMIT, machineById, type Kind, type Machine } from "./machines";
 import { dayLabel, israelDay, slotEnd, slotIso, slotStart, weekRange } from "./time";
 
 /** phone: the booker's, saved with the booking so everyone sees how to reach whoever holds the slot.
  *  (The name always comes from the server — rec.owner.name — so it can't be faked.) */
-export type Booking = { machine: string; kind: Kind; day: string; time: string; start: string; phone?: string; reminderId?: string };
+/** seats: 2 = the whole machine, 1 = shared with one more person. Bookings from before sharing have none = whole. */
+export type Booking = { machine: string; kind: Kind; day: string; time: string; seats?: 1 | 2; start: string; phone?: string; reminderId?: string };
 export type Rec = BahadRecord<Booking>;
+
+export const seatsOf = (r: Rec): number => (r.data.seats === 1 ? 1 : SLOT_SEATS);
+export const isShared = (r: Rec) => seatsOf(r) < SLOT_SEATS;
+
+/** Who holds a (machine, time) slot and how many seats are left (0 = full, 1 = one person can join). */
+export interface SlotState {
+  recs: Rec[];
+  left: number;
+  mine?: Rec;
+}
+export function slotState(recs: Rec[] | undefined): SlotState {
+  const list = [...(recs ?? [])].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  return { recs: list, left: Math.max(0, SLOT_SEATS - list.reduce((n, r) => n + seatsOf(r), 0)), mine: list.find((r) => r.mine) };
+}
+/** Bookings of one day grouped by "machine|time". */
+export function groupSlots(list: Rec[] | undefined): Map<string, Rec[]> {
+  const map = new Map<string, Rec[]>();
+  for (const r of list ?? []) {
+    const k = `${r.data.machine}|${r.data.time}`;
+    map.set(k, [...(map.get(k) ?? []), r]);
+  }
+  return map;
+}
 type Status = { machine: string; broken: boolean; note?: string };
 export type StatusRec = BahadRecord<Status>;
 
@@ -75,10 +99,10 @@ export function useLaundry() {
   );
 
   const book = useCallback(
-    async (m: Machine, day: string, time: string): Promise<boolean> => {
+    async (m: Machine, day: string, time: string, seats: 1 | 2): Promise<boolean> => {
       try {
         const who = me ?? (await bahad.user.me());
-        const data: Booking = { machine: m.id, kind: m.kind, day, time, start: slotIso(day, time) };
+        const data: Booking = { machine: m.id, kind: m.kind, day, time, seats, start: slotIso(day, time) };
         if (who.phone) data.phone = who.phone;
         const rec = await bookings.add(data);
         // Reminder 10 minutes before (only arrives if notifications are on in the profile).
@@ -97,12 +121,12 @@ export function useLaundry() {
             /* the reminder is a bonus */
           }
         }
-        toast(`שוריין ✔ ${m.label}, ${time}`);
+        toast(`שוריין ✔ ${m.label}, ${time}${seats === 1 ? " · בחלוקה" : ""}`);
         await Promise.all([loadDay(day), loadMine()]);
         return true;
       } catch (e) {
         const code = e instanceof BahadError ? e.code : undefined;
-        if (code === "conflict") toast("המשבצת נתפסה רגע לפניך — בחרו אחרת");
+        if (code === "conflict") toast(seats === 1 ? "המקום במשבצת נתפס רגע לפניך — בחרו אחרת" : "מישהו שריין את המשבצת רגע לפניך — אפשר אולי להתחלק, או לבחור אחרת");
         else if (code === "rate_limited") toast(`הגעת למכסה: ${WEEKLY_LIMIT} ${KIND_LABEL[m.kind].many} בשבוע (א'–ש')`);
         else toast(`שגיאה: ${(e as Error).message}`);
         await loadDay(day).catch(() => {});
@@ -126,6 +150,24 @@ export function useLaundry() {
       }
     },
     [bahad, bookings, loadDay, loadMine, toast],
+  );
+
+  /** Open my whole-machine booking for sharing (2 → 1 seat), or take the whole machine (1 → 2) when nobody shares it. */
+  const setSeats = useCallback(
+    async (rec: Rec, seats: 1 | 2): Promise<boolean> => {
+      try {
+        await bookings.update(rec.id, { seats });
+        toast(seats === 1 ? "המשבצת פתוחה לחלוקה" : "כל המכונה שלך במשבצת הזו");
+        await Promise.all([loadDay(rec.data.day), loadMine()]);
+        return true;
+      } catch (e) {
+        const code = e instanceof BahadError ? e.code : undefined;
+        toast(code === "conflict" ? "מישהו כבר מתחלק איתך במשבצת" : `שגיאה: ${(e as Error).message}`);
+        await loadDay(rec.data.day).catch(() => {});
+        return false;
+      }
+    },
+    [bookings, loadDay, loadMine, toast],
   );
 
   const setMachineBroken = useCallback(
@@ -153,6 +195,7 @@ export function useLaundry() {
     usedInWeek,
     book,
     cancel,
+    setSeats,
     setMachineBroken,
     machines: MACHINES,
   };

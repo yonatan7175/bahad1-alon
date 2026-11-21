@@ -1,13 +1,13 @@
 "use client";
-// לו"ז מכונות כביסה v3 — calendar of 40-minute slots: washers on floors 1 and 3, one dryer.
-// Every booked slot shows who booked it and their phone.
+// לו"ז מכונות כביסה v4 — calendar of 40-minute slots: one washer, one dryer.
+// A booking takes the whole machine or shares the slot with one more person. Every booked slot shows who and their phone.
 // Tabs: יומן (calendar) · שלי (my bookings + weekly quota) · חיפוש (find a free slot).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BellRing, CalendarDays, Eye, ListChecks, MessageCircle, Phone, Search, Trash2, Wrench } from "lucide-react";
+import { BellRing, CalendarDays, Eye, ListChecks, MessageCircle, Phone, Search, Trash2, User, Users, Wrench } from "lucide-react";
 import { useBahad } from "@/platform/client";
-import { BOOK_DAYS_AHEAD, KIND_LABEL, MACHINES, REMINDER_MINUTES, SLOT_MINUTES, WEEKLY_LIMIT, machineById, type Kind, type Machine } from "./machines";
-import { addDays, dayLabel, israelDay, slotEnd } from "./time";
-import { useLaundry, type Rec } from "./data";
+import { BOOK_DAYS_AHEAD, KIND_LABEL, REMINDER_MINUTES, SLOT_MINUTES, WEEKLY_LIMIT, machineById, type Kind, type Machine } from "./machines";
+import { addDays, dayLabel, israelDay, slotEnd, slotStart } from "./time";
+import { groupSlots, isShared, slotState, useLaundry, type Rec } from "./data";
 import { CalendarGrid, KindSwitch, Legend, MonthPicker, WeekNav, type View } from "./calendar";
 import { PersonCard } from "./person-card";
 import { MyBookings } from "./mine";
@@ -17,8 +17,10 @@ import { NowStrip } from "./now-strip";
 
 type Tab = "calendar" | "mine" | "find";
 type SheetState =
-  | { type: "book"; day: string; time: string; choices: Machine[]; machine: Machine }
-  | { type: "booking"; rec: Rec }
+  /** Book a free slot, or join a slot someone shares (then seats is always 1). */
+  | { type: "book"; day: string; time: string; choices: Machine[]; machine: Machine; seats: 1 | 2 }
+  /** A slot with bookings: who holds it, and managing mine. */
+  | { type: "slot"; day: string; time: string; machine: Machine }
   | { type: "machine"; machine: Machine }
   | { type: "month" }
   | null;
@@ -32,7 +34,7 @@ export function LaundryApp() {
   const [tab, setTab] = useState<Tab>("calendar");
   const [day, setDay] = useState(today);
   const [kind, setKind] = useState<Kind>("washer");
-  /** The calendar shows all three machines by default; "כביסה"/"ייבוש" narrow it. */
+  /** The calendar shows both machines by default; "כביסה"/"ייבוש" narrow it. */
   const [view, setView] = useState<View>("all");
   const [sheet, setSheet] = useState<SheetState>(null);
   const [busy, setBusy] = useState(false);
@@ -61,6 +63,13 @@ export function LaundryApp() {
     void loadDay(day).catch(() => bahad.ui.toast("לא הצלחנו לטעון את היומן"));
   }, [day, loadDay, bahad]);
 
+  // "שלי" shows who shares each booking — load the days of my upcoming bookings.
+  const { mine, byDay } = data;
+  useEffect(() => {
+    if (tab !== "mine" || !mine) return;
+    for (const d of new Set(mine.map((r) => r.data.day))) if (d >= today && !byDay[d]) void loadDay(d).catch(() => {});
+  }, [tab, mine, byDay, today, loadDay]);
+
   useEffect(() => {
     bahad.ui.setTitle(tab === "calendar" ? `כביסה · ${dayLabel(day, today)}` : tab === "mine" ? "השריונים שלי" : "חיפוש משבצת פנויה");
   }, [bahad, tab, day, today]);
@@ -85,13 +94,30 @@ export function LaundryApp() {
   };
   const close = useCallback(() => setSheet(null), []);
 
-  const openFree = (m: Machine, time: string) => setSheet({ type: "book", day, time, choices: [m], machine: m });
-  const openPick = (s: FreeSlot) => setSheet({ type: "book", day: s.day, time: s.time, choices: s.free, machine: s.free[0] });
+  /** Live state of a slot (updates while a sheet is open). */
+  const stateOf = (d: string, m: Machine, time: string) => slotState(groupSlots(data.byDay[d]).get(`${m.id}|${time}`));
+  const openFree = (m: Machine, time: string) => setSheet({ type: "book", day, time, choices: [m], machine: m, seats: 2 });
+  const openPick = (s: FreeSlot) => setSheet({ type: "book", day: s.day, time: s.time, choices: s.free, machine: s.free[0], seats: 2 });
+  const openSlot = (d: string, m: Machine, time: string) => {
+    const st = stateOf(d, m, time);
+    const future = slotStart(d, time).getTime() + SLOT_MINUTES * 60_000 > now.getTime();
+    const joinable = !st.mine && st.left > 0 && future && d >= today && d <= horizon && !data.broken[m.id];
+    setSheet(joinable ? { type: "book", day: d, time, choices: [m], machine: m, seats: 1 } : { type: "slot", day: d, time, machine: m });
+  };
+  const openRec = (rec: Rec) => {
+    const m = machineById(rec.data.machine);
+    if (m) setSheet({ type: "slot", day: rec.data.day, time: rec.data.time, machine: m });
+  };
+
+  // The book sheet follows the slot live: if someone took a seat meanwhile, only sharing is left.
+  const bookState = sheet?.type === "book" ? stateOf(sheet.day, sheet.machine, sheet.time) : null;
+  const bookSeats: 1 | 2 = sheet?.type === "book" ? (bookState && bookState.recs.length ? 1 : sheet.seats) : 2;
+  const bookFull = !!bookState && (bookState.left === 0 || !!bookState.mine);
 
   const confirmBook = async () => {
     if (sheet?.type !== "book") return;
     setBusy(true);
-    const ok = await data.book(sheet.machine, sheet.day, sheet.time);
+    const ok = await data.book(sheet.machine, sheet.day, sheet.time, bookSeats);
     setBusy(false);
     if (ok) setSheet(null);
   };
@@ -136,7 +162,11 @@ export function LaundryApp() {
               now={now}
               onBook={(m, time) => {
                 setKind(m.kind);
-                setSheet({ type: "book", day: today, time, choices: [m], machine: m });
+                openSlot(today, m, time);
+              }}
+              onFree={(m, time) => {
+                setKind(m.kind);
+                setSheet({ type: "book", day: today, time, choices: [m], machine: m, seats: 2 });
               }}
             />
           ) : null}
@@ -174,7 +204,7 @@ export function LaundryApp() {
             now={now}
             bookable={bookable}
             onFree={openFree}
-            onBooked={(rec) => setSheet({ type: "booking", rec })}
+            onSlot={(m, time) => openSlot(day, m, time)}
             onMachine={(m) => {
               setNote(data.broken[m.id]?.data.note ?? "");
               setSheet({ type: "machine", machine: m });
@@ -183,14 +213,14 @@ export function LaundryApp() {
           </div>
         </div>
       ) : tab === "mine" ? (
-        <MyBookings data={data} today={today} now={now} onOpen={(rec) => setSheet({ type: "booking", rec })} onFind={() => setTab("find")} />
+        <MyBookings data={data} today={today} now={now} onOpen={openRec} onFind={() => setTab("find")} />
       ) : (
         <Finder data={data} today={today} now={now} kind={kind} onKind={setKind} onPick={openPick} />
       )}
 
       {/* sheets */}
-      <Sheet open={sheet?.type === "book"} title="שריון משבצת" onClose={close}>
-        {sheet?.type === "book" ? (
+      <Sheet open={sheet?.type === "book"} title={bookState?.recs.length ? "הצטרפות למשבצת" : "שריון משבצת"} onClose={close}>
+        {sheet?.type === "book" && bookState ? (
           <>
             {sheet.choices.length > 1 ? (
               <div className="mb-3">
@@ -208,7 +238,7 @@ export function LaundryApp() {
               <Detail label="מכונה">{sheet.machine.label}</Detail>
               <Detail label="יום">{dayLabel(sheet.day, today)}</Detail>
               <Detail label="שעה">
-                <span className="tabular-nums">
+                <span className="tabular-nums" dir="ltr">
                   {sheet.time}–{slotEnd(sheet.time)}
                 </span>
               </Detail>
@@ -216,6 +246,45 @@ export function LaundryApp() {
                 {data.usedInWeek(sheet.day, sheet.machine.kind) + 1}/{WEEKLY_LIMIT} {KIND_LABEL[sheet.machine.kind].many}
               </Detail>
             </div>
+
+            {bookState.recs.length ? (
+              <div className="mt-3">
+                <p className="section-title mb-2">{bookFull ? "המשבצת כבר מלאה" : "תתחלק/י במשבצת עם"}</p>
+                {bookState.recs.filter((r) => !r.mine).map((r) => (
+                  <Booker key={r.id} rec={r} />
+                ))}
+              </div>
+            ) : (
+              <div className="mt-3">
+                <p className="section-title mb-2">איך לשריין</p>
+                <div role="radiogroup" aria-label="איך לשריין" className="grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      [2, "כל המכונה", "רק את/ה במשבצת", User],
+                      [1, "בחלוקה", "מקום לעוד אחד/ת", Users],
+                    ] as const
+                  ).map(([n, title, sub, Icon]) => (
+                    <button
+                      key={n}
+                      type="button"
+                      role="radio"
+                      aria-checked={bookSeats === n}
+                      onClick={() => setSheet({ ...sheet, seats: n })}
+                      className={`flex min-h-[72px] flex-col items-start gap-0.5 rounded-ctl border p-3 text-start transition-all ${
+                        bookSeats === n ? "border-accent bg-accent-soft ring-1 ring-accent/30" : "border-line hover:bg-surface-2"
+                      }`}
+                    >
+                      <span className="flex items-center gap-1.5 text-sm font-bold">
+                        <Icon className="size-4 text-accent" aria-hidden="true" />
+                        {title}
+                      </span>
+                      <span className="text-xs text-muted">{sub}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <p className="mt-3 flex items-center gap-2 text-xs text-muted">
               <Phone className="size-4 shrink-0" aria-hidden="true" />
               {data.me?.phone ? (
@@ -239,72 +308,85 @@ export function LaundryApp() {
               type="button"
               className="btn mt-4 h-12 w-full"
               onClick={confirmBook}
-              disabled={busy || data.usedInWeek(sheet.day, sheet.machine.kind) >= WEEKLY_LIMIT}
+              disabled={busy || bookFull || data.usedInWeek(sheet.day, sheet.machine.kind) >= WEEKLY_LIMIT}
             >
-              {busy ? "משריין…" : "שריון"}
+              {busy ? "משריין…" : bookState.recs.length ? "הצטרפות" : "שריון"}
             </button>
           </>
         ) : null}
       </Sheet>
 
-      <Sheet open={sheet?.type === "booking"} title={sheet?.type === "booking" && sheet.rec.mine ? "השריון שלי" : "משבצת תפוסה"} onClose={close}>
-        {sheet?.type === "booking" ? (
-          <>
-            <div className="divide-y divide-line rounded-ctl border border-line px-4">
-              <Detail label="מכונה">{machineById(sheet.rec.data.machine)?.label}</Detail>
-              <Detail label="יום">{dayLabel(sheet.rec.data.day, today)}</Detail>
-              <Detail label="שעה">
-                <span className="tabular-nums">
-                  {sheet.rec.data.time}–{slotEnd(sheet.rec.data.time)}
-                </span>
-              </Detail>
-            </div>
-            {!sheet.rec.mine ? (
-              <div className="mt-3">
-                <p className="section-title mb-2">שוריין ע״י</p>
-                {sheet.rec.data.phone ? (
-                  <div className="rounded-card border border-line bg-bg-elevated p-4" data-testid="booker-card">
-                    <p className="text-lg font-extrabold">{sheet.rec.owner.name}</p>
-                    <p className="mt-0.5 text-base font-bold tabular-nums text-muted" dir="ltr">
-                      {sheet.rec.data.phone}
-                    </p>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <a href={`tel:${sheet.rec.data.phone.replace(/[^\d+]/g, "")}`} className="btn-secondary min-h-11">
-                        <Phone className="size-4 text-accent" aria-hidden="true" /> חיוג
-                      </a>
-                      <a
-                        href={`https://wa.me/972${sheet.rec.data.phone.replace(/\D/g, "").replace(/^0/, "")}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn-secondary min-h-11"
-                      >
-                        <MessageCircle className="size-4 text-accent" aria-hidden="true" /> וואטסאפ
-                      </a>
-                    </div>
+      <Sheet
+        open={sheet?.type === "slot"}
+        title={sheet?.type === "slot" && stateOf(sheet.day, sheet.machine, sheet.time).mine ? "השריון שלי" : "משבצת תפוסה"}
+        onClose={close}
+      >
+        {sheet?.type === "slot"
+          ? (() => {
+              const st = stateOf(sheet.day, sheet.machine, sheet.time);
+              const mine = st.mine;
+              const others = st.recs.filter((r) => !r.mine);
+              const future = slotStart(sheet.day, sheet.time).getTime() + SLOT_MINUTES * 60_000 > now.getTime();
+              const run = async (f: () => Promise<boolean>, closeAfter: boolean) => {
+                setBusy(true);
+                const ok = await f();
+                setBusy(false);
+                if (ok && closeAfter) setSheet(null);
+              };
+              return (
+                <>
+                  <div className="divide-y divide-line rounded-ctl border border-line px-4">
+                    <Detail label="מכונה">{sheet.machine.label}</Detail>
+                    <Detail label="יום">{dayLabel(sheet.day, today)}</Detail>
+                    <Detail label="שעה">
+                      <span className="tabular-nums" dir="ltr">
+                        {sheet.time}–{slotEnd(sheet.time)}
+                      </span>
+                    </Detail>
+                    {mine ? (
+                      <Detail label="סוג">{isShared(mine) ? (others.length ? `בחלוקה עם ${others[0].owner.name}` : "בחלוקה — מקום לעוד אחד") : "כל המכונה"}</Detail>
+                    ) : null}
                   </div>
-                ) : (
-                  <PersonCard id={sheet.rec.owner.id} fallbackName={sheet.rec.owner.name} />
-                )}
-              </div>
-            ) : null}
-            {sheet.rec.mine || data.canModerate ? (
-              <button
-                type="button"
-                className="btn-danger mt-4 h-12 w-full"
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  const ok = await data.cancel(sheet.rec);
-                  setBusy(false);
-                  if (ok) setSheet(null);
-                }}
-              >
-                <Trash2 className="size-4" aria-hidden="true" />
-                {sheet.rec.mine ? "ביטול השריון" : "פינוי המשבצת (מפקד/ת)"}
-              </button>
-            ) : null}
-          </>
-        ) : null}
+                  {st.recs.length === 0 ? <p className="mt-3 text-sm text-muted">המשבצת התפנתה.</p> : null}
+                  {others.length ? (
+                    <div className="mt-3 space-y-2">
+                      <p className="section-title">{mine ? "מתחלק/ת איתך" : others.length > 1 ? "שוריין ע״י (בחלוקה)" : "שוריין ע״י"}</p>
+                      {others.map((r) => (
+                        <div key={r.id}>
+                          <Booker rec={r} />
+                          {data.canModerate ? (
+                            <button type="button" className="btn-danger mt-2 min-h-11 w-full" disabled={busy} onClick={() => run(() => data.cancel(r), others.length === 1 && !mine)}>
+                              <Trash2 className="size-4" aria-hidden="true" />
+                              פינוי {r.owner.name} (מפקד/ת)
+                            </button>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {mine && future ? (
+                    isShared(mine) ? (
+                      others.length === 0 ? (
+                        <button type="button" className="btn-secondary mt-4 h-12 w-full" disabled={busy} onClick={() => run(() => data.setSeats(mine, 2), false)}>
+                          <User className="size-4" aria-hidden="true" /> לתפוס את כל המכונה
+                        </button>
+                      ) : null
+                    ) : (
+                      <button type="button" className="btn-secondary mt-4 h-12 w-full" disabled={busy} onClick={() => run(() => data.setSeats(mine, 1), false)}>
+                        <Users className="size-4" aria-hidden="true" /> לפתוח לחלוקה עם עוד מישהו
+                      </button>
+                    )
+                  ) : null}
+                  {mine ? (
+                    <button type="button" className="btn-danger mt-3 h-12 w-full" disabled={busy} onClick={() => run(() => data.cancel(mine), true)}>
+                      <Trash2 className="size-4" aria-hidden="true" />
+                      ביטול השריון
+                    </button>
+                  ) : null}
+                </>
+              );
+            })()
+          : null}
       </Sheet>
 
       <Sheet open={sheet?.type === "month"} title="מעבר לתאריך" onClose={close}>
@@ -357,10 +439,40 @@ export function LaundryApp() {
         ) : null}
       </Sheet>
       <p className="mt-6 text-center text-xs text-subtle">
-        {MACHINES.filter((m) => m.kind === "washer").length} מכונות כביסה (קומה 1, קומה 3) · מייבש אחד · משבצות של {SLOT_MINUTES} דקות ·
+        מכונת כביסה ומייבש · משבצות של {SLOT_MINUTES} דקות · כל המכונה או בחלוקה לשניים ·
         עד {WEEKLY_LIMIT} כביסות ו-{WEEKLY_LIMIT} ייבושים לשבוע
       </p>
       <span className="sr-only">{israelDay(now)}</span>
     </main>
+  );
+}
+
+/** Who holds a seat: name + phone with call / WhatsApp, or the directory card when no phone was saved. */
+/** Israeli number → WhatsApp's international form: "054-1234567" / "+972 54…" → "97254…". */
+const waNumber = (phone: string) => {
+  const d = phone.replace(/\D/g, "");
+  return d.startsWith("972") ? d : `972${d.replace(/^0/, "")}`;
+};
+
+function Booker({ rec }: { rec: Rec }) {
+  if (!rec.data.phone) return <PersonCard id={rec.owner.id} fallbackName={rec.owner.name} />;
+  return (
+    <div className="rounded-card border border-line bg-bg-elevated p-4" data-testid="booker-card">
+      <p className="flex items-center gap-2 text-lg font-extrabold">
+        {rec.owner.name}
+        {isShared(rec) ? <span className="badge-accent">בחלוקה</span> : null}
+      </p>
+      <p className="mt-0.5 text-base font-bold tabular-nums text-muted">
+        <span dir="ltr">{rec.data.phone}</span>
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <a href={`tel:${rec.data.phone.replace(/[^\d+]/g, "")}`} className="btn-secondary min-h-11">
+          <Phone className="size-4 text-accent" aria-hidden="true" /> חיוג
+        </a>
+        <a href={`https://wa.me/${waNumber(rec.data.phone)}`} target="_blank" rel="noopener noreferrer" className="btn-secondary min-h-11">
+          <MessageCircle className="size-4 text-accent" aria-hidden="true" /> וואטסאפ
+        </a>
+      </div>
+    </div>
   );
 }

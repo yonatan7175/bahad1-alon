@@ -233,7 +233,7 @@ Every app has `apps/<slug>/app.json`. The home page, permissions and data rules 
 | `icon` | ✔ | SVG (or PNG ≥ 192 px) inside the app folder |
 | `tags` | ✔ | 1–3 tags, each must exist in `apps/tags.json` |
 | `authors` | ✔ | GitHub usernames (they become CODEOWNERS of the folder) |
-| `status` | ✔ | `live`, `beta` (shows a badge) or `hidden` (only admins see it) |
+| `status` | ✔ | `live` or `hidden` (only admins see it) |
 | `audience` | – | Roles that see the app. Default: all |
 | `scopes` | – | Subset of `profile`, `role`, `unit`, `contact`, `data`, `push`. `profile` is implicit. `data` is implied when `collections` exist. |
 | `collections` | – | Data rules per collection, see below |
@@ -433,13 +433,13 @@ The Supabase free tier keeps no backups you can download. A weekly **encrypted**
 │ (הכל)(לומדות)(לוגיסטיקה)(לו"ז)→│  tag chips, scroll sideways
 │ ┌────┐ ┌────┐ ┌────┐          │
 │ │ 🧺 │ │ 🧭 │ │ 📦 │          │  app grid: icon + name
-│ │כביסה│ │ניווט│ │חוסרים│ beta │  badge for "beta"
+│ │כביסה│ │ניווט│ │חוסרים│        │
 │ └────┘ └────┘ └────┘          │
 └───────────────────────────────┘
 ```
 - **Search:** matches name, description and tags. Hebrew-aware: ignores niqqud and quote/geresh differences (`לו"ז` = `לוז`).
 - **Tag filter:** single-select chips, synced to the URL (`/?tag=לומדות`) so a filtered view can be shared.
-- Shows only apps with status `live` or `beta` whose `audience` includes the user's role, minus any app hidden by an admin.
+- Shows only apps with status `live` whose `audience` includes the user's role, minus any app hidden by an admin.
 - Empty state, loading skeletons, and offline banner.
 
 ## App host (`/a/<slug>`)

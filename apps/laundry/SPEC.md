@@ -1,19 +1,21 @@
-# לו"ז מכונות כביסה v2 — spec (draft, waiting for owner decisions)
+# לו"ז מכונות כביסה v4 — spec
 
 ## Goals
 Booking a washer or dryer must take **under 10 seconds**, look like a calendar, and be fair (weekly limit).
 
 ## Model
 - **Machines** are a separate list per company: name + type (`washer` / `dryer`), active on/off. **Commanders/admins edit it inside the app** (no code change when a machine breaks).
-- **Slots**: 30 minutes, 06:00–24:00, Israel time. The week is Sunday–Saturday.
+- **Machines (v4)**: one washer and one dryer (`src/machines.ts`).
+- **Slots**: 40 minutes, 06:00–24:00, Israel time. The week is Sunday–Saturday.
+- **Whole or shared**: a booking takes the whole machine (`seats: 2`) or shares the slot (`seats: 1`) — at most two people per slot. A shared slot with a seat left can be joined; a half-taken slot can't be taken whole. Enforced on the server (`capacity`).
 - **Booking** = machine + day + start slot + length (1–N consecutive slots). Washer and dryer bookings are separate.
-- **Weekly limit**: 2 per week per person (exact counting rule: decision 1).
+- **Weekly limit**: 3 washes + 3 dries per week per person (a shared booking counts as one).
 - Commanders/admins can free any booking in their company (`moderate: commander`).
 - Reminder push 10 minutes before (when notifications are on); cancelling a booking cancels the reminder.
 
 ## Screens
-1. **יומן (calendar)** — main view. Day strip (7 days, swipe) + a time grid: rows = 30-min slots, columns = machines (washers first, then dryers, with a filter chip "כביסה / מייבש / הכל"). Free = empty cell; mine = filled accent; taken = grey with first name. Tap a free cell → bottom sheet: machine, time, length (30 / 60 / 90 min), "שריון". A "now" line on today. Past slots disabled.
-2. **ההשתבצויות שלי** — upcoming bookings as cards (machine, day, time, countdown "בעוד 2 שעות"), quota meter "1 / 2 השבוע — כביסה", cancel / move. Past week history collapsed.
+1. **יומן (calendar)** — main view. Day strip (7 days, swipe) + a time grid: rows = 40-min slots, columns = machines (washers first, then dryers, with a filter chip "כביסה / מייבש / הכל"). Free = empty cell; mine = filled accent; taken = grey with first name. Tap a free cell → bottom sheet: machine, time, "כל המכונה" / "בחלוקה", "שריון". Tap a shared cell with a seat left → join it. A "now" line on today. Past slots disabled.
+2. **ההשתבצויות שלי** — upcoming bookings as cards (machine, day, time, countdown "בעוד 2 שעות"), quota meter "1 / 3 השבוע — כביסה", cancel / move. Past week history collapsed.
 3. **חיפוש סלוט פנוי** — quick finder: type (washer / dryer / either), when (today / tomorrow / this week / a specific day), time of day (בוקר / צהריים / ערב / לילה / any), length → a list of the next free options ("היום 19:30 · כביסה 2"), sorted by soonest. One tap books it. Also an "הבא בתור" button = earliest free slot now.
 
 ## Rules enforced

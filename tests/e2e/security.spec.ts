@@ -135,7 +135,7 @@ test("the Platform API rejects cross-origin and sessionless calls", async ({ req
 test("kill switch: a disabled app is refused by the API and its page", async ({ browser }) => {
   const admin = await newUserPage(browser, "admin@example.com", "/admin?tab=apps");
   const row = admin.page.locator("li", { hasText: "/evil-app" });
-  await row.locator("select").selectOption("disabled");
+  await row.locator('select[name="status"]').selectOption("disabled");
   await row.locator('input[name="reason"]').fill("בדיקה");
   await row.getByRole("button", { name: "עדכון" }).click();
   await admin.page.waitForURL(/ok=/);
@@ -147,7 +147,7 @@ test("kill switch: a disabled app is refused by the API and its page", async ({ 
 
   await admin.page.goto("/admin?tab=apps");
   const row2 = admin.page.locator("li", { hasText: "/evil-app" });
-  await row2.locator("select").selectOption("none");
+  await row2.locator('select[name="status"]').selectOption("none");
   await row2.getByRole("button", { name: "עדכון" }).click();
   await admin.page.waitForURL(/ok=/);
   expect((await api(cadet.page, "evil-app", "user.me")).result).toBeTruthy();

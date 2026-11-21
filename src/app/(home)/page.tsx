@@ -7,6 +7,7 @@ import { commandersCanApprove, requireApproval } from "@/platform/server/config"
 import { PortalHeader } from "@/components/portal-header";
 import { AppGrid, type GridApp } from "@/components/app-grid";
 import { approvedLinkApps, pendingSubmissionCount } from "@/platform/server/submissions";
+import { frameUrlOf, linkAppPath, linkOpensInside } from "@/lib/embed";
 
 export default async function Home(props: PageProps<"/">) {
   const session = await requireApproved("/");
@@ -21,9 +22,17 @@ export default async function Home(props: PageProps<"/">) {
     iconUrl: app.iconUrl,
     status,
   }));
-  // Websites approved through "הוספת אפליקציה" — link tiles that open in a new tab.
+  // Websites approved through "הוספת אפליקציה": open inside the portal when the site allows framing, else in a new tab.
   for (const l of await approvedLinkApps(db)) {
-    apps.push({ slug: `link-${l.id}`, name: l.name, description: l.description, tags: ["קישורים"], iconUrl: "", status: "live", link: { url: l.url, emoji: l.emoji, image: l.icon } });
+    apps.push({
+      slug: `link-${l.id}`,
+      name: l.name,
+      description: l.description,
+      tags: ["קישורים"],
+      iconUrl: "",
+      status: "live",
+      link: { url: l.url, emoji: l.emoji, image: l.icon, inside: linkOpensInside(l) ? linkAppPath(l.id, frameUrlOf(l)) : null },
+    });
   }
   const tags = allTags()
     .map((t) => ({ name: t, count: apps.filter((a) => a.tags.includes(t)).length }))

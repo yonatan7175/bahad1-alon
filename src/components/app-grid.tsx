@@ -12,9 +12,12 @@ export interface GridApp {
   description: string;
   tags: string[];
   iconUrl: string;
-  status: "live" | "beta" | "hidden" | "disabled";
-  /** An admin-approved outside website ("הוספת אפליקציה"): opens in a new tab, no Platform API. */
-  link?: { url: string; emoji: string; image?: string | null };
+  status: "live" | "hidden" | "disabled";
+  /**
+   * An admin-approved outside website ("הוספת אפליקציה"), no Platform API. `inside` is its in-portal
+   * page (/l/<id>/<host>) when the site can be framed; otherwise the tile opens it in a new tab.
+   */
+  link?: { url: string; emoji: string; image?: string | null; inside?: string | null };
 }
 
 function greeting(h: number) {
@@ -183,30 +186,39 @@ const CARD =
   "group relative flex h-full flex-col items-center rounded-card border border-line bg-surface px-2 pb-4 pt-5 text-center shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-lift active:scale-[0.97]";
 const ICON = "size-16 rounded-[22px] shadow-[var(--shadow)] ring-1 ring-black/5";
 
+function LinkIcon({ link }: { link: NonNullable<GridApp["link"]> }) {
+  return link.image ? (
+    // eslint-disable-next-line @next/next/no-img-element -- uploaded icon (data URL, validated on the server)
+    <img src={link.image} alt="" width={64} height={64} className={`${ICON} object-cover`} loading="lazy" />
+  ) : (
+    <span className={`${ICON} flex items-center justify-center bg-surface-2 text-[32px]`} aria-hidden="true">
+      {link.emoji}
+    </span>
+  );
+}
+
 function AppCard({ app }: { app: GridApp }) {
+  if (app.link?.inside) {
+    // Opens inside the portal, exactly like a built-in app.
+    return (
+      <Link href={app.link.inside} className={CARD}>
+        <LinkIcon link={app.link} />
+        <span className="mt-3 line-clamp-2 text-[15px] font-bold leading-snug">{app.name}</span>
+      </Link>
+    );
+  }
   if (app.link) {
     return (
       <a href={app.link.url} target="_blank" rel="noopener noreferrer" className={CARD} aria-label={`${app.name} (נפתח בלשונית חדשה)`}>
         <ExternalLink className="absolute end-2.5 top-2.5 size-3.5 text-subtle" aria-hidden="true" />
-        {app.link.image ? (
-          // eslint-disable-next-line @next/next/no-img-element -- uploaded icon (data URL, validated on the server)
-          <img src={app.link.image} alt="" width={64} height={64} className={`${ICON} object-cover`} loading="lazy" />
-        ) : (
-          <span className={`${ICON} flex items-center justify-center bg-surface-2 text-[32px]`} aria-hidden="true">
-            {app.link.emoji}
-          </span>
-        )}
+        <LinkIcon link={app.link} />
         <span className="mt-3 line-clamp-2 text-[15px] font-bold leading-snug">{app.name}</span>
       </a>
     );
   }
   return (
     <Link href={`/a/${app.slug}`} className={CARD}>
-      {app.status === "beta" ? (
-        <span className="badge-beta absolute end-2 top-2">בטא</span>
-      ) : app.status === "hidden" ? (
-        <span className="badge-hidden absolute end-2 top-2">מוסתר</span>
-      ) : null}
+      {app.status === "hidden" ? <span className="badge-hidden absolute end-2 top-2">מוסתר</span> : null}
       {/* eslint-disable-next-line @next/next/no-img-element -- static SVG/PNG icon from the app folder */}
       <img src={app.iconUrl} alt="" width={64} height={64} className={ICON} loading="lazy" />
       <span className="mt-3 line-clamp-2 text-[15px] font-bold leading-snug">{app.name}</span>

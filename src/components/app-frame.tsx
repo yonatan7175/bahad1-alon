@@ -19,6 +19,22 @@ export interface PublicApp {
   tier: "simple" | "full" | "external";
   scopes: string[];
   status: string;
+  /** Approved websites ("הוספת אפליקציה") have no icon file: an emoji (iconUrl is then ""). */
+  emoji?: string;
+  /** Shown in "על האפליקציה" instead of version/authors for approved websites. */
+  suggestedBy?: string | null;
+}
+
+function AppIcon({ app, size, className }: { app: PublicApp; size: number; className: string }) {
+  if (!app.iconUrl) {
+    return (
+      <span aria-hidden="true" className={`${className} flex items-center justify-center bg-surface-2`} style={{ fontSize: Math.round(size * 0.6) }}>
+        {app.emoji ?? "🔗"}
+      </span>
+    );
+  }
+  // eslint-disable-next-line @next/next/no-img-element -- static app icon or a validated data URL
+  return <img src={app.iconUrl} alt="" width={size} height={size} className={`${className} object-cover`} />;
 }
 
 const ShellContext = createContext<ShellApi | null>(null);
@@ -63,12 +79,11 @@ export function AppFrame({ app, children }: { app: PublicApp; children: ReactNod
               <ArrowRight className="size-5" aria-hidden="true" />
             </Link>
             <Link href="/" aria-label="צ1 — דף הבית" className="ms-1 shrink-0 rounded-[9px] transition-transform active:scale-95">
-              {/* eslint-disable-next-line @next/next/no-img-element -- static app icon */}
-              <img src={app.iconUrl} alt="" width={30} height={30} className="size-[30px] rounded-[9px] shadow-[var(--shadow-sm)]" />
+              <AppIcon app={app} size={30} className="size-[30px] rounded-[9px] shadow-[var(--shadow-sm)]" />
             </Link>
             <h1 className="ms-2 flex min-w-0 flex-1 items-center gap-2 text-base font-bold" data-testid="app-title">
               <span className="truncate">{title}</span>
-              {app.status === "beta" ? <span className="badge-beta">בטא</span> : app.status === "hidden" ? <span className="badge-hidden">מוסתר</span> : null}
+              {app.status === "hidden" ? <span className="badge-hidden">מוסתר</span> : null}
             </h1>
             <div className="relative" ref={menuRef}>
               <button type="button" aria-label="תפריט" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((m) => !m)} className="icon-btn">
@@ -115,15 +130,18 @@ export function AppFrame({ app, children }: { app: PublicApp; children: ReactNod
         >
           <div className="card w-full max-w-md animate-rise p-6 shadow-lift" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start gap-4">
-              {/* eslint-disable-next-line @next/next/no-img-element -- static app icon */}
-              <img src={app.iconUrl} alt="" width={56} height={56} className="size-14 rounded-2xl shadow-[var(--shadow-sm)]" />
+              <AppIcon app={app} size={56} className="size-14 rounded-2xl shadow-[var(--shadow-sm)]" />
               <div className="min-w-0 flex-1">
                 <h2 id="about-title" className="text-lg font-extrabold">
                   {app.name}
                 </h2>
-                <p className="mt-0.5 text-xs text-subtle" dir="ltr">
-                  v{app.version} · {app.authors.join(", ")}
-                </p>
+                {app.version ? (
+                  <p className="mt-0.5 text-xs text-subtle" dir="ltr">
+                    v{app.version} · {app.authors.join(", ")}
+                  </p>
+                ) : app.suggestedBy ? (
+                  <p className="mt-0.5 text-xs text-subtle">הוצע ע״י {app.suggestedBy}</p>
+                ) : null}
               </div>
               <button type="button" className="icon-btn -me-2 -mt-2" onClick={() => setAbout(false)} aria-label="סגירה">
                 <X className="size-5" aria-hidden="true" />

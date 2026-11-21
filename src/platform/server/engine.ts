@@ -299,7 +299,8 @@ function periodRange(day: string, period: "day" | "week"): [string, string] {
 const isScalar = (v: unknown) => v === null || ["string", "number", "boolean"].includes(typeof v);
 
 /**
- * Collection constraints that need the database: `unique` (no two records share these values)
+ * Collection constraints that need the database: `unique` (no two records share these values),
+ * `capacity` (a group of key values holds up to N seats)
  * and `quota` (per-user limits per day/week, by a date inside the record). Runs inside the
  * write transaction, under advisory locks, so concurrent writes can't slip past them.
  */
@@ -344,6 +345,37 @@ async function enforceConstraints(t: Db, ctx: Ctx, name: string, rule: Collectio
       [ctx.app.slug, name, JSON.stringify(key), excludeId],
     );
     if (rows.length) throw new BahadError("conflict", `a record with the same ${rule.unique.join(" + ")} already exists`);
+  }
+  if (rule.capacity) {
+    const c = rule.capacity;
+    const key: Record<string, unknown> = {};
+    for (const k of c.keys) {
+      if (!Object.hasOwn(data, k) || !isScalar(data[k])) throw new BahadError("invalid", `"${k}" is required (string, number, boolean or null)`);
+      key[k] = data[k];
+    }
+    let size = 1;
+    if (c.sizeField) {
+      const v = data[c.sizeField];
+      if (typeof v !== "number" || !Number.isInteger(v) || v < 1 || v > c.max) {
+        throw new BahadError("invalid", `"${c.sizeField}" must be a whole number from 1 to ${c.max}`);
+      }
+      size = v;
+    }
+    await t.query("select pg_advisory_xact_lock(hashtext($1))", [`${ctx.app.slug}/${name}/capacity/${JSON.stringify(c.keys.map((k) => key[k]))}`]);
+    // Seats already taken by the other records of this group. A record without a valid size (e.g. written
+    // before sizeField existed) counts as taking every seat — the safe reading.
+    const seats = c.sizeField
+      ? `case when jsonb_typeof(data -> $5) = 'number' and (data ->> $5)::numeric >= 1 and (data ->> $5)::numeric <= $6
+              then ceil((data ->> $5)::numeric) else $6 end`
+      : "1";
+    const { rows } = await t.query<{ n: number }>(
+      `select coalesce(sum(${seats}), 0)::int as n from public.app_records
+        where app_slug = $1 and collection = $2 and data @> $3::jsonb and ($4::uuid is null or id <> $4::uuid)`,
+      c.sizeField
+        ? [ctx.app.slug, name, JSON.stringify(key), excludeId, c.sizeField, c.max]
+        : [ctx.app.slug, name, JSON.stringify(key), excludeId],
+    );
+    if ((rows[0]?.n ?? 0) + size > c.max) throw new BahadError("conflict", `not enough room left for the same ${c.keys.join(" + ")} (${c.max} seats)`);
   }
   for (const q of rule.quota ?? []) {
     if (q.match && !Object.entries(q.match).every(([k, v]) => Object.hasOwn(data, k) && data[k] === v)) continue;
@@ -442,7 +474,7 @@ async function dataUpdate(deps: EngineDeps, ctx: Ctx, p: Record<string, unknown>
     const merged = toJsonObject({ ...cur.data, ...patch }, "data");
     validateSchema(ctx, name, rule, merged);
     enforceOwnRoom(ctx, rule, merged);
-    if (rule.unique || rule.quota || rule.window) {
+    if (rule.unique || rule.capacity || rule.quota || rule.window) {
       await t.query("select pg_advisory_xact_lock(hashtext($1))", [`${ctx.app.slug}/${name}/${cur.owner_id}`]);
       await enforceConstraints(t, ctx, name, rule, merged, cur.owner_id, id);
     }

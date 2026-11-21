@@ -128,7 +128,7 @@ test("simple app: notes are private, the platoon board updates live for others",
   for (const x of [A, B, C]) await x.ctx.close();
 });
 
-test("laundry: calendar booking, live for others, weekly limit, my bookings, finder", async ({ browser }) => {
+test("laundry: calendar booking, whole or shared, live for others, weekly limit, my bookings, finder", async ({ browser }) => {
   const A = await newUserPage(browser, "cadet1@example.com", "/a/laundry");
   const B = await newUserPage(browser, "cadet4@example.com", "/a/laundry"); // other company — machines are shared
   // next week's Wednesday: always in the future and inside the 4-week booking window
@@ -137,35 +137,52 @@ test("laundry: calendar booking, live for others, weekly limit, my bookings, fin
     await p.getByRole("group", { name: "בחירת יום" }).getByRole("button").nth(3).click();
   }
   const dialog = A.page.getByRole("dialog");
+  const dialogB = B.page.getByRole("dialog");
 
-  // book the floor-1 washer at 20:00 (40-minute slots)
-  await A.page.getByRole("button", { name: "כביסה · קומה 1 20:00–20:40 פנוי — שריון" }).click();
-  await expect(dialog).toContainText("כביסה · קומה 1");
-  await expect(dialog).toContainText("יוצגו במשבצת");
+  // book the whole washer at 20:00 (40-minute slots; "כל המכונה" is the default)
+  await A.page.getByRole("button", { name: "מכונת כביסה 20:00–20:40 פנוי — שריון" }).click();
+  await expect(dialog).toContainText("מכונת כביסה");
+  await expect(dialog).toContainText(/יוצגו? במשבצת/); // with or without a phone in the profile
+  await expect(dialog.getByRole("radio", { name: /כל המכונה/ })).toHaveAttribute("aria-checked", "true");
   await dialog.getByRole("button", { name: "שריון", exact: true }).click();
-  await expect(A.page.getByRole("button", { name: "כביסה · קומה 1 20:00–20:40 השריון שלי" })).toBeVisible();
-  // B sees it taken, live — with the booker's name (and phone, when the profile has one) on the slot
-  const taken = B.page.getByRole("button", { name: /כביסה · קומה 1 20:00–20:40 תפוס ע"י ישראל ישראלי/ });
+  await expect(A.page.getByRole("button", { name: "מכונת כביסה 20:00–20:40 השריון שלי", exact: true })).toBeVisible();
+  // B sees it taken, live — with the booker's name (and phone, when the profile has one) on the slot; no joining a whole booking
+  const taken = B.page.getByRole("button", { name: /מכונת כביסה 20:00–20:40 תפוס ע"י ישראל ישראלי/ });
   await expect(taken).toBeVisible({ timeout: 15_000 });
   await expect(taken).toContainText("ישראל ישראלי");
   await taken.click();
   await expect(B.page.getByTestId("booker-card")).toContainText("ישראל ישראלי");
-  await expect(B.page.getByRole("dialog").getByRole("button", { name: /ביטול|פינוי/ })).toHaveCount(0); // a cadet can't free others' slots
+  await expect(dialogB.getByRole("button", { name: /ביטול|פינוי|הצטרפות/ })).toHaveCount(0); // a cadet can't free others' slots
   await B.page.keyboard.press("Escape");
 
-  // second washer booking OK, third blocked by the weekly limit (2 washes / week)
-  await A.page.getByRole("button", { name: "כביסה · קומה 3 21:20–22:00 פנוי — שריון" }).click();
+  // a shared booking: B joins it, then the slot is full for both
+  await A.page.getByRole("button", { name: "מכונת כביסה 21:20–22:00 פנוי — שריון" }).click();
+  await dialog.getByRole("radio", { name: /בחלוקה/ }).click();
   await dialog.getByRole("button", { name: "שריון", exact: true }).click();
-  await expect(A.page.getByRole("button", { name: "כביסה · קומה 3 21:20–22:00 השריון שלי" })).toBeVisible();
-  await A.page.getByRole("button", { name: "כביסה · קומה 1 22:00–22:40 פנוי — שריון" }).click();
-  await expect(dialog).toContainText("ניצלת את 2");
+  await expect(A.page.getByRole("button", { name: "מכונת כביסה 21:20–22:00 השריון שלי, פתוח לחלוקה" })).toBeVisible();
+  const join = B.page.getByRole("button", { name: /מכונת כביסה 21:20–22:00 ישראל ישראלי מתחלק\/ת.*הצטרפות/ });
+  await expect(join).toBeVisible({ timeout: 15_000 });
+  await expect(join).toContainText("מקום לעוד אחד");
+  await join.click();
+  await expect(dialogB).toContainText("הצטרפות למשבצת");
+  await expect(dialogB).toContainText("ישראל ישראלי");
+  await dialogB.getByRole("button", { name: "הצטרפות", exact: true }).click();
+  await expect(B.page.getByRole("button", { name: /מכונת כביסה 21:20–22:00 השריון שלי, בחלוקה עם ישראל ישראלי/ })).toBeVisible();
+  await expect(A.page.getByRole("button", { name: /מכונת כביסה 21:20–22:00 השריון שלי, בחלוקה עם / })).toBeVisible({ timeout: 15_000 });
+
+  // third washer booking OK, fourth blocked by the weekly limit (3 washes / week)
+  await A.page.getByRole("button", { name: "מכונת כביסה 22:00–22:40 פנוי — שריון" }).click();
+  await dialog.getByRole("button", { name: "שריון", exact: true }).click();
+  await expect(A.page.getByRole("button", { name: "מכונת כביסה 22:00–22:40 השריון שלי", exact: true })).toBeVisible();
+  await A.page.getByRole("button", { name: "מכונת כביסה 22:40–23:20 פנוי — שריון" }).click();
+  await expect(dialog).toContainText("ניצלת את 3");
   await expect(dialog.getByRole("button", { name: "שריון", exact: true })).toBeDisabled();
   await A.page.keyboard.press("Escape");
   // the dryer is a separate quota
   await A.page.getByRole("radio", { name: /ייבוש/ }).click();
   await A.page.getByRole("button", { name: "מייבש 20:40–21:20 פנוי — שריון" }).click();
   await dialog.getByRole("button", { name: "שריון", exact: true }).click();
-  await expect(A.page.getByRole("button", { name: "מייבש 20:40–21:20 השריון שלי" })).toBeVisible();
+  await expect(A.page.getByRole("button", { name: "מייבש 20:40–21:20 השריון שלי", exact: true })).toBeVisible();
 
   // far ahead (5 weeks) is view-only; the month picker jumps back
   for (let i = 0; i < 5; i++) await A.page.getByRole("button", { name: "השבוע הבא" }).click();
@@ -177,12 +194,13 @@ test("laundry: calendar booking, live for others, weekly limit, my bookings, fin
   await expect(dialog).toContainText("מעבר לתאריך");
   await A.page.keyboard.press("Escape");
 
-  // my bookings: 3 upcoming; cancel one
+  // my bookings: 4 upcoming (the shared one says with whom); cancel one
   await A.page.getByRole("button", { name: "שלי", exact: true }).click();
-  await expect(A.page.getByTestId("my-booking")).toHaveCount(3);
+  await expect(A.page.getByTestId("my-booking")).toHaveCount(4);
+  await expect(A.page.getByTestId("my-booking").filter({ hasText: "בחלוקה עם" })).toHaveCount(1);
   await A.page.getByTestId("my-booking").first().click();
   await dialog.getByRole("button", { name: "ביטול השריון" }).click();
-  await expect(A.page.getByTestId("my-booking")).toHaveCount(2);
+  await expect(A.page.getByTestId("my-booking")).toHaveCount(3);
 
   // finder: shows free slots and books from a result
   await A.page.getByRole("button", { name: "חיפוש", exact: true }).click();
@@ -199,8 +217,9 @@ test("laundry: calendar booking, live for others, weekly limit, my bookings, fin
 test("directory: everyone sees everyone; phone/email can be hidden", async ({ browser }) => {
   const A = await newUserPage(browser, "cadet2@example.com", "/profile");
   await A.page.locator("#phone").fill("0527777777");
-  await A.page.getByRole("button", { name: "שמירה" }).click();
-  await expect(A.page.getByText("נשמר")).toBeVisible();
+  const phoneForm = A.page.locator("form").filter({ has: A.page.locator("#phone") });
+  await phoneForm.getByRole("button", { name: "שמירה" }).click();
+  await expect(phoneForm.getByText("נשמר")).toBeVisible();
 
   const B = await newUserPage(browser, "cadet4@example.com", "/people");
   await expect(B.page.getByTestId("person-row").filter({ hasText: "נועה כהן" })).toBeVisible();

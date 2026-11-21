@@ -14,6 +14,8 @@ const env = {
   NEXT_PUBLIC_DISABLE_SW: "1",
   NEXT_PUBLIC_BAHAD_REALTIME: "sse",
   NEXT_TELEMETRY_DISABLED: "1",
+  // Probe stand-in for "הוספת אפליקציה": *.frame.test can be framed, other hosts cannot (mock auth only).
+  BAHAD_EMBED_PROBE_FAKE: "1",
 };
 
 export default defineConfig({

@@ -6,7 +6,7 @@
   "icon": "icon.svg",
   "tags": ["כלים"],
   "authors": ["bahad-portal"],
-  "status": "beta",
+  "status": "live",
   "scopes": ["profile", "unit", "push"],
   "collections": {
     "notes": { "read": "own", "create": "any", "maxPerUser": 50 },

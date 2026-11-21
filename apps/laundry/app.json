@@ -1,7 +1,7 @@
 {
   "slug": "laundry",
   "name": "לו\"ז מכונות כביסה",
-  "description": "שריון מכונות הכביסה (קומה 1, קומה 3) והמייבש: משבצות של 40 דקות, רואים מי שריין ואת הטלפון שלו",
+  "description": "שריון מכונת הכביסה והמייבש: משבצות של 40 דקות, את כל המכונה או בחלוקה עם עוד אחד, רואים מי שריין ואת הטלפון שלו",
   "tier": "full",
   "icon": "icon.svg",
   "tags": [
@@ -11,7 +11,7 @@
   "authors": [
     "REPLACE-ME"
   ],
-  "status": "beta",
+  "status": "live",
   "audience": [
     "cadet",
     "commander",
@@ -30,14 +30,18 @@
       "read": "all",
       "create": "any",
       "moderate": "commander",
-      "unique": [
-        "machine",
-        "day",
-        "time"
-      ],
+      "capacity": {
+        "keys": [
+          "machine",
+          "day",
+          "time"
+        ],
+        "max": 2,
+        "sizeField": "seats"
+      },
       "quota": [
         {
-          "max": 2,
+          "max": 3,
           "period": "week",
           "dateField": "day",
           "match": {
@@ -45,7 +49,7 @@
           }
         },
         {
-          "max": 2,
+          "max": 3,
           "period": "week",
           "dateField": "day",
           "match": {
@@ -60,6 +64,7 @@
           "kind",
           "day",
           "time",
+          "seats",
           "start"
         ],
         "properties": {
@@ -67,7 +72,6 @@
             "type": "string",
             "enum": [
               "w1",
-              "w3",
               "d1"
             ]
           },
@@ -85,6 +89,14 @@
           "time": {
             "type": "string",
             "pattern": "^([01]\\d|2[0-3]):(00|20|40)$"
+          },
+          "seats": {
+            "type": "integer",
+            "enum": [
+              1,
+              2
+            ],
+            "description": "2 = the whole machine, 1 = shared with one more person"
           },
           "start": {
             "type": "string",
@@ -159,7 +171,6 @@
             "type": "string",
             "enum": [
               "w1",
-              "w3",
               "d1"
             ]
           },
@@ -175,5 +186,5 @@
       }
     }
   },
-  "version": "3.0.0"
+  "version": "4.0.0"
 }

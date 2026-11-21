@@ -55,6 +55,19 @@ export const collectionRuleSchema = z.strictObject({
     .refine(unique, "unique keys must be unique")
     .optional()
     .describe("Top-level keys whose combined values must be unique in the collection (e.g. a booked slot). Enforced atomically."),
+  capacity: z
+    .strictObject({
+      keys: z.array(z.string().min(1).max(64)).min(1).max(5).refine(unique, "capacity keys must be unique"),
+      max: z.number().int().min(2).max(50).describe("How many seats one group of key values holds"),
+      sizeField: z
+        .string()
+        .min(1)
+        .max(64)
+        .optional()
+        .describe("Top-level key with the seats a record takes (an integer 1..max). Without it every record takes 1 seat. Existing records without a valid value count as taking all the seats"),
+    })
+    .optional()
+    .describe('Like "unique", but a group of key values holds up to "max" seats (e.g. a slot two people may share, or one person takes whole). Enforced atomically; when full, the write fails with "conflict"'),
   quota: z
     .array(
       z.strictObject({
@@ -109,7 +122,7 @@ export const manifestSchema = z
       .array(z.string().regex(GITHUB_USER_RE, "authors: GitHub usernames"))
       .min(1)
       .refine(unique, "authors must be unique"),
-    status: z.enum(["live", "beta", "hidden"]),
+    status: z.enum(["live", "hidden"]),
     audience: z
       .array(z.enum(ROLES))
       .min(1)

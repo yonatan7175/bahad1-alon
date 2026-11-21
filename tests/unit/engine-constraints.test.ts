@@ -99,3 +99,60 @@ describe("list({ mine })", () => {
     expect(all.length).toBe(2);
   });
 });
+
+describe("capacity (a slot two people may share, or one person takes whole)", () => {
+  const take = (u: TestUser, seats: unknown, time = "18:00") =>
+    call(u, "data.add", { collection: "shared", data: { machine: "d1", day: "2026-11-22", time, seats } });
+
+  it("two people sharing fill the slot; a third is rejected", async () => {
+    const c = await user(db, "ג", {});
+    await take(U.a, 1);
+    await expect(take(U.b, 1)).resolves.toBeTruthy();
+    await expect(take(c, 1)).rejects.toMatchObject({ code: "conflict" });
+  });
+
+  it("taking the whole slot blocks everyone, and can't join a half-taken slot", async () => {
+    await take(U.a, 2);
+    await expect(take(U.b, 1)).rejects.toMatchObject({ code: "conflict" });
+    await take(U.a, 1, "19:00");
+    await expect(take(U.b, 2, "19:00")).rejects.toMatchObject({ code: "conflict" });
+    // other slots are separate
+    await expect(take(U.b, 2, "20:00")).resolves.toBeTruthy();
+  });
+
+  it("freeing a seat lets the next person in; updates don't count the record twice", async () => {
+    const r = (await take(U.a, 1)) as { id: string };
+    await take(U.b, 1);
+    await expect(call(U.a, "data.update", { collection: "shared", id: r.id, patch: { note: "x" } })).resolves.toBeTruthy();
+    // growing to the whole slot while someone shares it is not allowed
+    await expect(call(U.a, "data.update", { collection: "shared", id: r.id, patch: { seats: 2 } })).rejects.toMatchObject({ code: "conflict" });
+    await call(U.a, "data.remove", { collection: "shared", id: r.id });
+    const c = await user(db, "ד", {});
+    await expect(take(c, 1)).resolves.toBeTruthy();
+  });
+
+  it("validates the size field", async () => {
+    for (const bad of [0, 3, 1.5, "1", null, undefined]) await expect(take(U.a, bad)).rejects.toMatchObject({ code: "invalid" });
+  });
+
+  it("an old record without a size takes every seat", async () => {
+    await db.query(
+      `insert into public.app_records (app_slug, collection, owner_id, data) values ('booking', 'shared', $1, $2::jsonb)`,
+      [U.a.id, JSON.stringify({ machine: "d1", day: "2026-11-22", time: "18:00" })],
+    );
+    await expect(take(U.b, 1)).rejects.toMatchObject({ code: "conflict" });
+  });
+
+  it("is atomic under concurrency (10 people share one slot at once → exactly 2 win)", async () => {
+    const people = await Promise.all(Array.from({ length: 10 }, (_, i) => user(db, `ש${i}`, {})));
+    const results = await Promise.allSettled(people.map((p) => take(p, 1, "07:00")));
+    expect(results.filter((r) => r.status === "fulfilled").length).toBe(2);
+  });
+
+  it("without sizeField every record takes one seat", async () => {
+    const c = await user(db, "ה", {});
+    await call(U.a, "data.add", { collection: "pairs", data: { slot: "x" } });
+    await call(U.b, "data.add", { collection: "pairs", data: { slot: "x" } });
+    await expect(call(c, "data.add", { collection: "pairs", data: { slot: "x" } })).rejects.toMatchObject({ code: "conflict" });
+  });
+});

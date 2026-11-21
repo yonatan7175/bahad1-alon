@@ -7,6 +7,7 @@ import { getSession, type Session } from "@/platform/auth/session";
 import { getDb } from "@/platform/server/db";
 import { audit } from "@/platform/server/audit";
 import { effectiveStatus, getApp, loadOverride } from "@/platform/server/registry";
+import { recordEmbedProbe } from "@/platform/server/submissions";
 import { MAX_PENDING_PER_USER, SUBMISSION_EMOJIS, cleanText, normalizeGithubRepo, normalizeSiteUrl, validIconDataUrl } from "@/lib/submissions";
 
 const PATH = "/a/add-app";
@@ -75,10 +76,12 @@ export async function submitApp(form: FormData) {
   );
   if (dup[0]) back({ error: dup[0].status === "approved" ? "הקישור הזה כבר נמצא באתר" : "מישהו כבר הציע את הקישור הזה — הוא ממתין לאישור" }, kind);
 
-  await db.query(
-    "insert into public.app_submissions (kind, name, description, url, emoji, icon, submitted_by) values ($1, $2, $3, $4, $5, $6, $7)",
+  const { rows: ins } = await db.query<{ id: string }>(
+    "insert into public.app_submissions (kind, name, description, url, emoji, icon, submitted_by) values ($1, $2, $3, $4, $5, $6, $7) returning id",
     [kind, name, description, url, emoji, icon, s.profile.id],
   );
+  // So the admin already sees whether the site can open inside the portal.
+  if (kind === "url" && ins[0]) await recordEmbedProbe(db, ins[0].id, url);
   back({ ok: "ההצעה נשלחה — מנהל האתר יאשר או ידחה אותה" }, kind);
 }
 
@@ -96,19 +99,21 @@ export async function reviewSubmission(form: FormData) {
   const decision = form.get("decision") === "approve" ? "approved" : "rejected";
   const note = cleanText(form.get("note"), 200) || null;
   const db = await getDb();
-  const { rows } = await db.query<{ kind: string; name: string }>(
+  const { rows } = await db.query<{ kind: string; name: string; url: string }>(
     `update public.app_submissions set status = $2, review_note = $3, reviewed_by = $4, reviewed_at = now()
-      where id = $1 and status = 'pending' returning kind, name`,
+      where id = $1 and status = 'pending' returning kind, name, url`,
     [sid, decision, note, s.profile.id],
   );
   if (!rows[0]) back({ error: "ההצעה כבר טופלה" });
+  // Fresh check at approval time (the site may have changed since it was suggested).
+  const probe = decision === "approved" && rows[0].kind === "url" ? await recordEmbedProbe(db, sid, rows[0].url) : null;
   await audit(db, s.profile.id, `app.submission.${decision === "approved" ? "approve" : "reject"}`, sid, { kind: rows[0].kind, name: rows[0].name });
   back({
     ok:
       decision === "rejected"
         ? "ההצעה נדחתה"
         : rows[0].kind === "url"
-          ? `"${rows[0].name}" נוסף לדף הבית`
+          ? `"${rows[0].name}" נוסף לדף הבית — ${probe?.embedUrl ? "נפתח בתוך האתר" : "נפתח בלשונית חדשה (האתר לא מאפשר הצגה בפנים)"}`
           : `המאגר "${rows[0].name}" נשמר ברשימת מאגרי GitHub`,
   });
 }
@@ -124,4 +129,50 @@ export async function removeSubmission(form: FormData) {
   );
   if (rows[0]) await audit(db, s.profile.id, "app.submission.remove", sid, { kind: rows[0].kind, name: rows[0].name });
   back({ ok: "הוסר" }, rows[0]?.kind);
+}
+
+/** Checks again whether an approved / pending website can open inside the portal. */
+export async function recheckEmbed(form: FormData) {
+  await requireAdmin();
+  const sid = id(form);
+  const db = await getDb();
+  const { rows } = await db.query<{ url: string; name: string; status: string }>(
+    "select url, name, status from public.app_submissions where id = $1 and kind = 'url' and status <> 'rejected'",
+    [sid],
+  );
+  if (!rows[0]) back({ error: "לא נמצא" });
+  const r = await recordEmbedProbe(db, sid, rows[0].url);
+  back({ ok: `"${rows[0].name}": ${r.note}` }, rows[0].status === "approved" ? "url" : undefined);
+}
+
+/** Re-checks every approved website (e.g. sites approved before in-portal opening existed). */
+export async function recheckAllEmbeds() {
+  const s = await requireAdmin();
+  const db = await getDb();
+  const { rows } = await db.query<{ id: string; url: string }>(
+    "select id, url from public.app_submissions where kind = 'url' and status = 'approved' order by embed_checked_at asc nulls first limit 40",
+  );
+  let inside = 0;
+  for (let i = 0; i < rows.length; i += 4) {
+    const batch = await Promise.all(rows.slice(i, i + 4).map((r) => recordEmbedProbe(db, r.id, r.url)));
+    inside += batch.filter((b) => b.embedUrl).length;
+  }
+  await audit(db, s.profile.id, "app.submission.recheck_all", null, { checked: rows.length, inside });
+  back({ ok: `נבדקו ${rows.length} אתרים — ${inside} נפתחים בתוך האתר` });
+}
+
+/** The admin's choice for one approved website: follow the check (auto), always inside (frame) or always a new tab (tab). */
+export async function setEmbedMode(form: FormData) {
+  const s = await requireAdmin();
+  const sid = id(form);
+  const raw = String(form.get("mode") ?? "");
+  const mode = raw === "frame" || raw === "tab" ? raw : "auto";
+  const db = await getDb();
+  const { rows } = await db.query<{ name: string }>(
+    "update public.app_submissions set embed_mode = $2 where id = $1 and kind = 'url' and status = 'approved' returning name",
+    [sid, mode],
+  );
+  if (!rows[0]) back({ error: "לא נמצא" });
+  await audit(db, s.profile.id, "app.submission.embed_mode", sid, { mode, name: rows[0].name });
+  back({ ok: mode === "tab" ? `"${rows[0].name}" ייפתח בלשונית חדשה` : mode === "frame" ? `"${rows[0].name}" ייפתח תמיד בתוך האתר` : `"${rows[0].name}" — לפי הבדיקה האוטומטית` });
 }

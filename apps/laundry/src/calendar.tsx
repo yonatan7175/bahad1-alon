@@ -1,24 +1,24 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, Wind, WashingMachine, Wrench } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, Users, Wind, WashingMachine, Wrench } from "lucide-react";
 import { MACHINES, SLOTS, SLOT_MINUTES, type Kind, type Machine } from "./machines";
 import { addDays, israelDay, monthGrid, monthLabel, slotEnd, slotStart, weekDays } from "./time";
-import type { Laundry, Rec } from "./data";
+import { groupSlots, isShared, slotState, type Laundry, type Rec } from "./data";
 
 const ROW = 52; // px per 40-minute row (≥ 44px tap target)
 
-/** What the calendar shows: one machine kind, or all three machines side by side. */
+/** What the calendar shows: one machine kind, or both machines side by side. */
 export type View = Kind | "all";
 
 export function KindSwitch<T extends View>({ kind, onChange, withAll = false }: { kind: T; onChange: (k: T) => void; withAll?: boolean }) {
-  const opts: { k: View; label: string; Icon: typeof Wind; n: number }[] = [
-    ...(withAll ? [{ k: "all" as const, label: "הכל", Icon: LayoutGrid, n: MACHINES.length }] : []),
-    { k: "washer", label: "כביסה", Icon: WashingMachine, n: MACHINES.filter((m) => m.kind === "washer").length },
-    { k: "dryer", label: "ייבוש", Icon: Wind, n: MACHINES.filter((m) => m.kind === "dryer").length },
+  const opts: { k: View; label: string; Icon: typeof Wind }[] = [
+    ...(withAll ? [{ k: "all" as const, label: "הכל", Icon: LayoutGrid }] : []),
+    { k: "washer", label: "כביסה", Icon: WashingMachine },
+    { k: "dryer", label: "ייבוש", Icon: Wind },
   ];
   return (
     <div role="radiogroup" aria-label="סוג מכונה" className={`grid gap-1 rounded-ctl bg-surface-2 p-1 ${withAll ? "grid-cols-3" : "grid-cols-2"}`}>
-      {opts.map(({ k, label, Icon, n }) => (
+      {opts.map(({ k, label, Icon }) => (
         <button
           key={k}
           type="button"
@@ -31,7 +31,6 @@ export function KindSwitch<T extends View>({ kind, onChange, withAll = false }: 
         >
           <Icon className="size-4" aria-hidden="true" />
           {label}
-          <span className="text-xs font-medium text-subtle">({n})</span>
         </button>
       ))}
     </div>
@@ -174,6 +173,7 @@ export function Legend() {
       {item("border border-dashed border-line-strong bg-surface", "פנוי")}
       {item("bg-accent", "שלי")}
       {item("bg-surface-3", "תפוס")}
+      {item("border border-dashed border-line-strong bg-[linear-gradient(to_bottom,var(--surface-3)_0_58%,transparent_58%)]", "מקום לעוד אחד")}
       {item("border border-danger/35 bg-[repeating-linear-gradient(135deg,color-mix(in_srgb,var(--danger)_30%,transparent)_0_3px,transparent_3px_6px)]", "עבר")}
       {item("bg-[repeating-linear-gradient(135deg,var(--surface-2)_0_4px,var(--surface-3)_4px_8px)]", "תקולה / מחוץ לטווח")}
     </div>
@@ -187,7 +187,7 @@ export function CalendarGrid({
   now,
   bookable,
   onFree,
-  onBooked,
+  onSlot,
   onMachine,
 }: {
   data: Laundry;
@@ -197,12 +197,13 @@ export function CalendarGrid({
   /** false outside the booking window (before today / more than 4 weeks ahead) */
   bookable: boolean;
   onFree: (m: Machine, time: string) => void;
-  onBooked: (r: Rec) => void;
+  /** A slot with at least one booking: see who holds it, join a shared slot, or manage mine. */
+  onSlot: (m: Machine, time: string) => void;
   onMachine: (m: Machine) => void;
 }) {
   const machines = kind === "all" ? MACHINES : MACHINES.filter((m) => m.kind === kind);
   const list = data.byDay[day];
-  const map = useMemo(() => new Map((list ?? []).map((r) => [`${r.data.machine}|${r.data.time}`, r])), [list]);
+  const map = useMemo(() => groupSlots(list), [list]);
   const isToday = day === israelDay(now);
   const nowRef = useRef<HTMLDivElement>(null);
   const scrolledFor = useRef<string | null>(null);
@@ -219,6 +220,7 @@ export function CalendarGrid({
   const minutesFromStart = (now.getTime() - slotStart(day, SLOTS[0]).getTime()) / 60_000;
   const nowTop = (minutesFromStart / SLOT_MINUTES) * ROW;
   const cols = { gridTemplateColumns: `${machines.length > 2 ? 44 : 52}px repeat(${machines.length}, minmax(0, 1fr))` };
+  const PAST = "border border-danger/25 bg-[repeating-linear-gradient(135deg,color-mix(in_srgb,var(--danger)_18%,transparent)_0_5px,transparent_5px_10px)]";
 
   return (
     <div className="rounded-card border border-line bg-surface shadow-soft">
@@ -238,8 +240,8 @@ export function CalendarGrid({
               } ${data.canModerate ? "hover:bg-surface-2" : ""}`}
               aria-label={`${m.label}${b ? " — תקולה" : ""}`}
             >
-              <span className="truncate">{m.short}</span>
-              <span className="text-[10px] font-medium text-muted">{b ? <Wrench className="mx-auto size-3" aria-hidden="true" /> : m.kind === "washer" ? "כביסה" : "מייבש"}</span>
+              <span className="truncate">{m.label}</span>
+              {b ? <Wrench className="mx-auto size-3" aria-hidden="true" /> : null}
             </button>
           );
         })}
@@ -256,44 +258,70 @@ export function CalendarGrid({
           const end = new Date(slotStart(day, time).getTime() + SLOT_MINUTES * 60_000);
           const past = end.getTime() <= now.getTime();
           const fullHour = time.endsWith(":00");
-          const booker = (rec: Rec) => (rec.mine ? "שלי" : rec.owner.name);
+          const who = (rec: Rec) => (rec.mine ? "שלי" : rec.owner.name);
           return (
             <div key={time} className="grid gap-1" style={{ ...cols, height: ROW }}>
               <span className={`pt-1 text-center text-[11px] tabular-nums ${fullHour ? "font-bold text-fg" : "text-subtle"}`}>{time}</span>
               {machines.map((m) => {
-                const rec = map.get(`${m.id}|${time}`);
+                const st = slotState(map.get(`${m.id}|${time}`));
                 const broken = !!data.broken[m.id];
                 const base = "my-0.5 flex min-w-0 items-center justify-center rounded-[10px] px-1 text-[11px] font-semibold transition-all";
-                if (rec) {
-                  const own = rec.mine;
+                const range = `${m.label} ${time}–${slotEnd(time)}`;
+                if (st.recs.length) {
+                  const own = !!st.mine;
+                  const joinable = !own && st.left > 0 && !past && !broken && bookable;
+                  const others = st.recs.filter((r) => !r.mine);
+                  const label = own
+                    ? `${range} השריון שלי${others.length ? `, בחלוקה עם ${others[0].owner.name}` : st.left > 0 ? ", פתוח לחלוקה" : ""}`
+                    : st.left > 0
+                      ? `${range} ${others[0].owner.name} מתחלק/ת${others[0].data.phone ? `, ${others[0].data.phone}` : ""} — מקום אחד פנוי${joinable ? ", הצטרפות" : ""}`
+                      : `${range} תפוס ע"י ${others.map((r) => r.owner.name).join(" ו")}${others.length === 1 && others[0].data.phone ? `, ${others[0].data.phone}` : ""}`;
+                  const solo = st.recs.length === 1 ? st.recs[0] : null;
                   return (
                     <button
                       key={m.id}
                       type="button"
-                      onClick={() => onBooked(rec)}
-                      aria-label={`${m.label} ${time}–${slotEnd(time)} ${own ? "השריון שלי" : `תפוס ע"י ${booker(rec)}${rec.data.phone ? `, ${rec.data.phone}` : ""}`}`}
+                      onClick={() => onSlot(m, time)}
+                      aria-label={label}
                       className={`${base} ${
                         past
-                          ? "border border-danger/25 bg-[repeating-linear-gradient(135deg,color-mix(in_srgb,var(--danger)_18%,transparent)_0_5px,transparent_5px_10px)] text-muted"
+                          ? `${PAST} text-muted`
                           : own
                             ? "bg-accent text-accent-contrast shadow-[var(--shadow-sm)] hover:bg-accent-hover"
-                            : "bg-surface-3 text-fg"
+                            : st.left > 0
+                              ? "border border-dashed border-line-strong bg-[linear-gradient(to_bottom,var(--surface-3)_0_58%,transparent_58%)] text-fg hover:border-accent"
+                              : "bg-surface-3 text-fg"
                       }`}
                     >
                       <span className="flex min-w-0 flex-col items-center leading-tight">
-                        <span className="max-w-full truncate">{booker(rec)}</span>
-                        {rec.data.phone ? (
-                          <span className={`max-w-full truncate text-[10px] font-medium tabular-nums ${own ? "opacity-85" : "text-subtle"}`} dir="ltr">
-                            {rec.data.phone}
-                          </span>
-                        ) : null}
+                        {solo ? (
+                          <>
+                            <span className="max-w-full truncate">
+                              {who(solo)}
+                              {isShared(solo) ? <Users className="ms-1 inline size-3 align-[-2px] opacity-75" aria-hidden="true" /> : null}
+                            </span>
+                            {st.left > 0 && !past ? (
+                              <span className={`max-w-full truncate text-[10px] font-bold ${own ? "opacity-85" : "text-accent"}`}>+ מקום לעוד אחד</span>
+                            ) : solo.data.phone ? (
+                              <span className={`max-w-full truncate text-[10px] font-medium tabular-nums ${own ? "opacity-85" : "text-subtle"}`} dir="ltr">
+                                {solo.data.phone}
+                              </span>
+                            ) : null}
+                          </>
+                        ) : (
+                          st.recs.map((r) => (
+                            <span key={r.id} className="max-w-full truncate">
+                              {who(r)}
+                            </span>
+                          ))
+                        )}
                       </span>
                     </button>
                   );
                 }
                 if (past) {
                   // Time already passed — red stripes.
-                  return <span key={m.id} className={`${base} border border-danger/25 bg-[repeating-linear-gradient(135deg,color-mix(in_srgb,var(--danger)_18%,transparent)_0_5px,transparent_5px_10px)]`} aria-hidden="true" />;
+                  return <span key={m.id} className={`${base} ${PAST}`} aria-hidden="true" />;
                 }
                 if (broken || !bookable) {
                   return (
@@ -309,10 +337,10 @@ export function CalendarGrid({
                     key={m.id}
                     type="button"
                     onClick={() => onFree(m, time)}
-                    aria-label={`${m.label} ${time}–${slotEnd(time)} פנוי — שריון`}
-                    className={`${base} group border border-dashed border-line-strong/70 text-transparent hover:border-accent hover:bg-accent-soft hover:text-accent`}
+                    aria-label={`${range} פנוי — שריון`}
+                    className={`${base} group border border-dashed border-line-strong/70 text-subtle/60 hover:border-accent hover:bg-accent-soft hover:text-accent`}
                   >
-                    <span className="text-base leading-none group-hover:text-accent">+</span>
+                    <span className="text-base font-normal leading-none group-hover:text-accent" aria-hidden="true">+</span>
                   </button>
                 );
               })}

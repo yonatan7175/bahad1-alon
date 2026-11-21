@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Moon, Sun, Sunrise, Sunset, Clock, TriangleAlert, Zap } from "lucide-react";
+import { Moon, Sun, Sunrise, Sunset, Clock, TriangleAlert, Users, Zap } from "lucide-react";
 import { BOOK_DAYS_AHEAD, KIND_LABEL, MACHINES, SLOTS, SLOT_MINUTES, TIME_OF_DAY, WEEKLY_LIMIT, type Kind, type Machine } from "./machines";
 import { addDays, dayLabel, slotEnd, slotStart } from "./time";
 import { KindSwitch } from "./calendar";
-import type { Laundry } from "./data";
+import { groupSlots, slotState, type Laundry } from "./data";
 
 const TOD_ICON = { any: Clock, morning: Sunrise, noon: Sun, evening: Sunset, night: Moon } as const;
 type When = "today" | "tomorrow" | "week" | "month";
@@ -12,21 +12,33 @@ type When = "today" | "tomorrow" | "week" | "month";
 export interface FreeSlot {
   day: string;
   time: string;
+  /** Machines I can get into at this time: free, or shared by one person with a seat left. */
   free: Machine[];
+  /** machine id → name of the person sharing it (only for slots where I'd join someone). */
+  sharedWith: Record<string, string>;
 }
 
-/** Free (machine, slot) options for the next days — pure, so it is easy to test. */
+/** Free (machine, slot) options for the next days, including shared slots with a seat left — pure, so it is easy to test. */
 export function findFree(data: Pick<Laundry, "byDay" | "broken">, days: string[], kind: Kind, tod: (typeof TIME_OF_DAY)[number], now: Date): FreeSlot[] {
   const out: FreeSlot[] = [];
   const machines = MACHINES.filter((m) => m.kind === kind && !data.broken[m.id]);
   for (const day of days) {
-    const taken = new Set((data.byDay[day] ?? []).map((r) => `${r.data.machine}|${r.data.time}`));
+    const slots = groupSlots(data.byDay[day]);
     for (const time of SLOTS) {
       const h = Number(time.slice(0, 2));
       if (h < tod.from || h >= tod.to) continue;
       if (slotStart(day, time).getTime() + SLOT_MINUTES * 60_000 <= now.getTime()) continue;
-      const free = machines.filter((m) => !taken.has(`${m.id}|${time}`));
-      if (free.length) out.push({ day, time, free });
+      const free: Machine[] = [];
+      const sharedWith: Record<string, string> = {};
+      for (const m of machines) {
+        const st = slotState(slots.get(`${m.id}|${time}`));
+        if (st.mine || st.left === 0) continue;
+        free.push(m);
+        if (st.recs.length) sharedWith[m.id] = st.recs[0].owner.name;
+      }
+      // whole-machine options first
+      free.sort((a, b) => Number(a.id in sharedWith) - Number(b.id in sharedWith));
+      if (free.length) out.push({ day, time, free, sharedWith });
     }
   }
   return out;
@@ -142,7 +154,16 @@ export function Finder({
                     <span className="block truncate font-semibold">
                       {r.free.length === 1 ? r.free[0].label : `${r.free.length} מכונות פנויות`}
                     </span>
-                    <span className="block truncate text-xs text-muted">{r.free.map((m) => m.short).join(" · ")}</span>
+                    <span className="block truncate text-xs text-muted">
+                      {r.free.length === 1 && r.sharedWith[r.free[0].id] ? (
+                        <>
+                          <Users className="me-1 inline size-3.5 align-[-2px]" aria-hidden="true" />
+                          מקום לעוד אחד — בחלוקה עם {r.sharedWith[r.free[0].id]}
+                        </>
+                      ) : (
+                        r.free.map((m) => (r.sharedWith[m.id] ? `${m.short} (בחלוקה)` : m.short)).join(" · ")
+                      )}
+                    </span>
                   </span>
                   <span className="btn min-h-9 px-3 text-sm">שריון</span>
                 </button>

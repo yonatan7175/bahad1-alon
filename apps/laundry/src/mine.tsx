@@ -2,7 +2,7 @@
 import { CalendarClock, Search, Wind, WashingMachine } from "lucide-react";
 import { KIND_LABEL, SLOT_MINUTES, WEEKLY_LIMIT, machineById, type Kind } from "./machines";
 import { dayLabel, relativeFromNow, slotEnd, slotStart, weekRange } from "./time";
-import type { Laundry, Rec } from "./data";
+import { groupSlots, isShared, type Laundry, type Rec } from "./data";
 
 function QuotaMeter({ kind, used }: { kind: Kind; used: number }) {
   const Icon = kind === "washer" ? WashingMachine : Wind;
@@ -46,6 +46,8 @@ export function MyBookings({
   const sorted = [...data.mine].sort((a, b) => (a.data.day + a.data.time).localeCompare(b.data.day + b.data.time));
   const upcoming = sorted.filter((r) => slotStart(r.data.day, r.data.time).getTime() + SLOT_MINUTES * 60_000 > now.getTime());
   const hasNextWeek = upcoming.some((r) => r.data.day > to);
+  /** Who shares my slot with me, if anyone (from the days the calendar loaded). */
+  const partner = (r: Rec) => groupSlots(data.byDay[r.data.day]).get(`${r.data.machine}|${r.data.time}`)?.find((x) => !x.mine)?.owner.name;
 
   return (
     <div className="space-y-4">
@@ -97,7 +99,10 @@ export function MyBookings({
                     <span className="min-w-0 flex-1">
                       <span className="block font-bold">{m.label}</span>
                       <span className="block text-sm text-muted">
-                        {dayLabel(r.data.day, today)} · <span className="tabular-nums">{r.data.time}–{slotEnd(r.data.time)}</span>
+                        {dayLabel(r.data.day, today)} · <span className="tabular-nums" dir="ltr">{r.data.time}–{slotEnd(r.data.time)}</span>
+                      </span>
+                      <span className="block text-xs text-muted">
+                        {isShared(r) ? (partner(r) ? `בחלוקה עם ${partner(r)}` : "בחלוקה — מקום לעוד אחד") : "כל המכונה"}
                       </span>
                     </span>
                     <span className={live ? "badge-accent" : "badge-hidden"}>{live ? "עכשיו" : relativeFromNow(start, now)}</span>

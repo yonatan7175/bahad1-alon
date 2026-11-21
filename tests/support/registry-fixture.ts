@@ -69,6 +69,8 @@ export const REGISTRY: RegistryApp[] = [
         ],
       },
       windowed: { read: "all", create: "any", window: { dateField: "day", maxDaysAhead: 28 } },
+      shared: { read: "all", create: "any", moderate: "commander", capacity: { keys: ["machine", "day", "time"], max: 2, sizeField: "seats" } },
+      pairs: { read: "all", create: "any", capacity: { keys: ["slot"], max: 2 } },
     },
   }),
   app({ slug: "dir-app", scopes: ["directory"] }),

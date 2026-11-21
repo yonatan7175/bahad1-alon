@@ -45,7 +45,7 @@ Built on 2026-11-17 from [`plan.md`](../plan.md). Legend: ✅ done and tested ·
 ## Phase 5 — first real apps
 | App | Status |
 |---|---|
-| Laundry (לו"ז מכונות כביסה) — full app | ✅ v2 `beta` (spec: `apps/laundry/SPEC.md`): calendar of 30-min slots, 5 washers + 4 dryers (one shared set), 2 washes + 2 dries per week enforced on the server, my bookings, free-slot finder, commanders free slots / mark machines broken, 10-min reminder |
+| Laundry (לו"ז מכונות כביסה) — full app | ✅ v4 `live` (spec: `apps/laundry/SPEC.md`): calendar of 40-min slots, one washer + one dryer, each slot booked whole or shared by two (`capacity`), 3 washes + 3 dries per week enforced on the server, my bookings, free-slot finder, commanders free slots / mark machines broken, 10-min reminder |
 | דמות הקצין — external app | ✅ write.bahad1.com inside the portal frame (new `external` tier, no API access) |
 | User directory (`/people`) | ✅ owner request 2026-11-17: every approved user sees others' role, unit, phone, email; each user can hide phone/email (default shown) — **check with the קב"ם** |
 | Shortages (ריכוז חוסרים) — simple app | ✅ built as `hidden` (admins only) · ⬜ קב"ם + spec before `live` |

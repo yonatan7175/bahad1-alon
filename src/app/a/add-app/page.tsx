@@ -1,14 +1,15 @@
 // הוספת אפליקציה — suggest a website (shown as a link tile on the home page after an admin approves)
 // or a GitHub repository (after approval it is only saved in a list the admin sees).
 import Link from "next/link";
-import { Check, CircleAlert, ExternalLink, FolderGit2, Globe, Inbox, Send, Trash2, X } from "lucide-react";
+import { AppWindow, Check, CircleAlert, ExternalLink, FolderGit2, Globe, Inbox, RefreshCw, Send, Trash2, X } from "lucide-react";
 import { AppPage } from "@/components/app-page";
 import { requireApproved } from "@/platform/auth/session";
 import { getDb } from "@/platform/server/db";
 import { mySubmissions, submissionsByStatus, type Submission } from "@/platform/server/submissions";
 import { MAX_PENDING_PER_USER } from "@/lib/submissions";
+import { frameUrlOf, linkAppPath, linkOpensInside } from "@/lib/embed";
 import { IconPicker } from "./icon-picker";
-import { removeSubmission, reviewSubmission, submitApp, withdrawSubmission } from "./actions";
+import { recheckAllEmbeds, recheckEmbed, removeSubmission, reviewSubmission, setEmbedMode, submitApp, withdrawSubmission } from "./actions";
 
 export const metadata = { title: "הוספת אפליקציה" };
 
@@ -61,11 +62,66 @@ function Row({ s, children, who = false }: { s: Submission; children?: React.Rea
             {date(s.created_at)}
             {s.reviewed_at ? ` · ${s.status === "approved" ? "אושר" : "נדחה"} ${s.reviewer_name ? `ע״י ${s.reviewer_name}` : ""} ${date(s.reviewed_at)}` : ""}
           </p>
+          {s.kind === "url" && s.status !== "rejected" ? <EmbedStatus s={s} /> : null}
           {s.review_note ? <p className="mt-2 rounded-ctl bg-surface-2 px-3 py-2 text-sm">הערת מנהל: {s.review_note}</p> : null}
         </div>
       </div>
       {children}
     </li>
+  );
+}
+
+/** Where an approved website opens (inside the portal / new tab), and why. */
+function EmbedStatus({ s }: { s: Submission }) {
+  const inside = linkOpensInside(s);
+  const unchecked = !s.embed_checked_at && s.embed_mode === "auto";
+  return (
+    <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs" data-testid="embed-status">
+      <span className={inside ? "badge-accent" : "badge-warning"}>
+        {inside ? <AppWindow className="size-3" aria-hidden="true" /> : <ExternalLink className="size-3" aria-hidden="true" />}
+        {unchecked ? "עוד לא נבדק — נפתח בלשונית חדשה" : inside ? "נפתח בתוך האתר" : "נפתח בלשונית חדשה"}
+      </span>
+      {s.embed_mode !== "auto" ? <span className="text-muted">(נקבע ידנית)</span> : s.embed_note ? <span className="text-muted">{s.embed_note}</span> : null}
+      {s.status === "approved" && inside ? (
+        <Link href={linkAppPath(s.id, frameUrlOf(s))} className="font-bold text-accent hover:underline">
+          תצוגה
+        </Link>
+      ) : null}
+    </p>
+  );
+}
+
+/** Admin controls for one approved website: re-check and how it opens. */
+function EmbedControls({ s }: { s: Submission }) {
+  const modes = [
+    ["auto", "אוטומטי"],
+    ["frame", "תמיד בתוך האתר"],
+    ["tab", "תמיד בלשונית"],
+  ] as const;
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line pt-2">
+      <form action={setEmbedMode} className="flex flex-1 items-center gap-1" aria-label={`איך נפתח ${s.name}`}>
+        <input type="hidden" name="id" value={s.id} />
+        {modes.map(([m, label]) => (
+          <button
+            key={m}
+            type="submit"
+            name="mode"
+            value={m}
+            aria-pressed={s.embed_mode === m}
+            className={`min-h-11 rounded-ctl px-2.5 text-xs font-bold transition-colors ${s.embed_mode === m ? "bg-accent text-white" : "bg-surface-2 text-muted hover:text-fg"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </form>
+      <form action={recheckEmbed}>
+        <input type="hidden" name="id" value={s.id} />
+        <button type="submit" className="btn-ghost min-h-11 text-sm">
+          <RefreshCw className="size-4" aria-hidden="true" /> בדיקה מחדש
+        </button>
+      </form>
+    </div>
   );
 }
 
@@ -101,7 +157,7 @@ export default async function Page(props: PageProps<"/a/add-app">) {
         <header className="relative overflow-hidden rounded-card bg-[image:var(--hero)] p-5 text-[color:var(--hero-text)] shadow-[var(--shadow-lg)]">
           <h1 className="text-2xl font-black">הוספת אפליקציה</h1>
           <p className="mt-1 text-sm opacity-90">
-            מכירים אתר שימושי לגדוד? הציעו אותו כאן. מנהל האתר בודק כל הצעה — אחרי אישור, אתר יופיע בדף הבית לכולם.
+            מכירים אתר שימושי לגדוד? הציעו אותו כאן. מנהל האתר בודק כל הצעה — אחרי אישור, האתר יופיע בדף הבית לכולם ויפתח בתוך הפורטל, כמו כל אפליקציה.
           </p>
           <span className="pointer-events-none absolute -bottom-6 -start-3 text-[110px] leading-none opacity-10" aria-hidden="true">
             ➕
@@ -146,7 +202,7 @@ export default async function Page(props: PageProps<"/a/add-app">) {
             <input type="hidden" name="kind" value={kind} />
             <p className="text-sm text-muted">
               {kind === "url"
-                ? "כתובת של אתר (https). אחרי אישור — אריח חדש בדף הבית שפותח את האתר בלשונית חדשה."
+                ? "כתובת של אתר (https). אחרי אישור — אריח חדש בדף הבית שפותח את האתר בתוך הפורטל (אתרים שחוסמים הצגה בתוך אתר אחר ייפתחו בלשונית חדשה)."
                 : "קישור למאגר ב-GitHub. אחרי אישור הקישור נשמר ברשימה שמנהל האתר רואה (שום קוד לא מורץ)."}
             </p>
             <div>
@@ -229,6 +285,14 @@ export default async function Page(props: PageProps<"/a/add-app">) {
                       </button>
                     </div>
                   </form>
+                  {s.kind === "url" ? (
+                    <form action={recheckEmbed} className="mt-1 flex justify-end">
+                      <input type="hidden" name="id" value={s.id} />
+                      <button type="submit" className="btn-ghost min-h-11 text-sm">
+                        <RefreshCw className="size-4" aria-hidden="true" /> בדיקה אם אפשר לפתוח בתוך האתר
+                      </button>
+                    </form>
+                  ) : null}
                 </Row>
               ))}
             </Section>
@@ -236,7 +300,8 @@ export default async function Page(props: PageProps<"/a/add-app">) {
             <Section title="אתרים באתר (בדף הבית)" icon={<Globe className="size-5 text-accent" aria-hidden="true" />} count={sites.length} empty="עוד לא אושרו אתרים.">
               {sites.map((s) => (
                 <Row key={s.id} s={s} who>
-                  <form action={removeSubmission} className="mt-2 flex justify-end">
+                  <EmbedControls s={s} />
+                  <form action={removeSubmission} className="mt-1 flex justify-end">
                     <input type="hidden" name="id" value={s.id} />
                     <button type="submit" className="btn-ghost min-h-11 text-sm text-danger">
                       <Trash2 className="size-4" aria-hidden="true" /> הסרה מדף הבית
@@ -245,6 +310,14 @@ export default async function Page(props: PageProps<"/a/add-app">) {
                 </Row>
               ))}
             </Section>
+
+            {sites.length ? (
+              <form action={recheckAllEmbeds} className="-mt-3 flex justify-end">
+                <button type="submit" className="btn-ghost min-h-11 text-sm">
+                  <RefreshCw className="size-4" aria-hidden="true" /> בדיקה מחדש של כל האתרים
+                </button>
+              </form>
+            ) : null}
 
             <Section title="מאגרי GitHub שאושרו" icon={<FolderGit2 className="size-5 text-accent" aria-hidden="true" />} count={repos.length} empty="עוד לא אושרו מאגרים.">
               {repos.map((s) => (
