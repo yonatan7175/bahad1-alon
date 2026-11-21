@@ -38,9 +38,14 @@ test("approved websites open inside the portal when they allow it", async ({ bro
   await expect(outside).toHaveAttribute("href", "https://blocked.example.test/");
 
   // The in-portal page: app frame + sandboxed iframe; frame-src allows ONLY that site.
+  // CLICKING the tile must be a full page load: the frame-src for this site only arrives with a real
+  // document request (a client-side <Link> navigation keeps the home page's CSP and the frame stays blank).
   const href = (await inside.getAttribute("href"))!;
-  const res = await cadet.page.goto(href);
-  expect(res!.headers()["content-security-policy"]).toContain("frame-src 'self' https://tool.frame.test;");
+  const [res] = await Promise.all([
+    cadet.page.waitForResponse((r) => r.request().resourceType() === "document" && new URL(r.url()).pathname === href),
+    inside.click(),
+  ]);
+  expect(res.headers()["content-security-policy"]).toContain("frame-src 'self' https://tool.frame.test;");
   await expect(cadet.page.getByTestId("app-title")).toHaveText("כלי בתוך האתר");
   const frame = cadet.page.getByTestId("external-app-frame");
   await expect(frame).toHaveAttribute("src", "https://tool.frame.test/start");

@@ -83,9 +83,10 @@ function EmbedStatus({ s }: { s: Submission }) {
       </span>
       {s.embed_mode !== "auto" ? <span className="text-muted">(נקבע ידנית)</span> : s.embed_note ? <span className="text-muted">{s.embed_note}</span> : null}
       {s.status === "approved" && inside ? (
-        <Link href={linkAppPath(s.id, frameUrlOf(s))} className="font-bold text-accent hover:underline">
+        // Plain <a>: the framed site's CSP frame-src only arrives with a full page load (see app-grid.tsx).
+        <a href={linkAppPath(s.id, frameUrlOf(s))} className="font-bold text-accent hover:underline">
           תצוגה
-        </Link>
+        </a>
       ) : null}
     </p>
   );

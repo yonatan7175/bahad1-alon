@@ -199,12 +199,14 @@ function LinkIcon({ link }: { link: NonNullable<GridApp["link"]> }) {
 
 function AppCard({ app }: { app: GridApp }) {
   if (app.link?.inside) {
-    // Opens inside the portal, exactly like a built-in app.
+    // Opens inside the portal, exactly like a built-in app. A plain <a> (full page load), NOT <Link>:
+    // the page's CSP frame-src for this site comes from the proxy on a real request, and a client-side
+    // navigation keeps the previous page's CSP (frame-src 'self'), so the frame would stay blank.
     return (
-      <Link href={app.link.inside} className={CARD}>
+      <a href={app.link.inside} className={CARD}>
         <LinkIcon link={app.link} />
         <span className="mt-3 line-clamp-2 text-[15px] font-bold leading-snug">{app.name}</span>
-      </Link>
+      </a>
     );
   }
   if (app.link) {
