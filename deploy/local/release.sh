@@ -15,6 +15,8 @@ echo "▶ building $(git rev-parse --short HEAD) …"
 rm -rf .next-prod-build
 pnpm gen
 NODE_ENV=production BAHAD_DIST_DIR=.next-prod-build pnpm exec next build
+# A build points next-env.d.ts at its own dist dir; point it back at .next so `tsc` keeps working.
+pnpm exec next typegen >/dev/null 2>&1 || true
 echo "▶ swapping in the new build"
 systemctl --user stop alon-prod.service || true
 # Back up the production database while nothing writes to it (migrations run on the next start). Keeps the last 5.
