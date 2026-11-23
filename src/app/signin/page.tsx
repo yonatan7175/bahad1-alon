@@ -8,6 +8,7 @@ import { AuthShell } from "@/components/auth-shell";
 import { Avatar } from "@/components/avatar";
 import { GoogleSignInButton } from "./google-button";
 import { PasswordForm } from "./password-form";
+import { KabamStamp } from "@/components/kabam-stamp";
 
 export const metadata: Metadata = { title: "התחברות" };
 
@@ -20,7 +21,7 @@ export default async function SignIn(props: PageProps<"/signin">) {
   const mode = authMode();
 
   return (
-    <AuthShell>
+    <AuthShell corner={<KabamStamp href="/kabam" size={96} animate />}>
       <h1 className="text-center text-2xl font-extrabold">ברוכים הבאים</h1>
       <p className="mt-2 text-center text-muted">כל הכלים של הגדוד במקום אחד.</p>
       {sp.error ? (
@@ -34,7 +35,7 @@ export default async function SignIn(props: PageProps<"/signin">) {
           <p className="my-5 flex items-center gap-3 text-sm text-muted" aria-hidden="true">
             <span className="h-px flex-1 bg-line" /> או עם שם משתמש וסיסמה <span className="h-px flex-1 bg-line" />
           </p>
-          <PasswordForm next={next} />
+          <PasswordForm next={next} initialMode={sp.mode === "register" ? "register" : "signin"} />
         </>
       ) : null}
       <p className="mt-6 border-t border-line pt-4 text-center text-sm font-bold tracking-wide text-accent-ink">כל הטכנולוגיה של הבית במקום אחד</p>

@@ -235,6 +235,22 @@ export default async function Page(props: PageProps<"/a/add-app">) {
               <input id="description" name="description" className="field" maxLength={120} placeholder="מה זה ולמה זה שימושי לגדוד" />
             </div>
             {kind === "url" ? <IconPicker /> : null}
+            {kind === "url" ? (
+              <div className="rounded-ctl border border-[var(--brand-red)]/25 bg-danger-soft/50 p-3 text-[13px] leading-relaxed">
+                <p className="font-bold">לפני שמציעים אתר — הנחיות הקב״מית:</p>
+                <ul className="mt-1 list-disc space-y-0.5 ps-5">
+                  <li>
+                    האתר <b>יורש את ההתחברות של צ1</b> — בלי מערכת התחברות נפרדת משלו.
+                  </li>
+                  <li>
+                    האתר עובר <b>אישור קב״מית בנפרד</b> לפני שהוא עולה כאפליקציה.
+                  </li>
+                </ul>
+                <Link href="/kabam#sites" className="mt-1.5 inline-block font-semibold text-accent underline-offset-4 hover:underline">
+                  לדבר הקב״מית המלא ←
+                </Link>
+              </div>
+            ) : null}
             <p className="rounded-ctl bg-warning-soft px-3 py-2 text-xs font-medium text-warning">
               אסור להציע אתרים עם מידע מסווג, מידע אישי, או אתר שמתחזה למערכת רשמית של צה&quot;ל.
             </p>

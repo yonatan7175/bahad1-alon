@@ -4,7 +4,8 @@ import { Emblem, Ribbon, SchoolBadge } from "./brand";
 import { APP_NAME } from "@/lib/site";
 
 /** Layout for sign-in / onboarding / pending / blocked: brand hero band + floating card. */
-export function AuthShell({ children, step }: { children: ReactNode; step?: 1 | 2 | 3 }) {
+/** corner: something pinned over the card's top end corner (the "אושר קב״ם" stamp on the sign-in page). */
+export function AuthShell({ children, step, corner }: { children: ReactNode; step?: 1 | 2 | 3; corner?: ReactNode }) {
   return (
     <main className="relative flex-1">
       <div className="hero absolute inset-x-0 top-0 h-80 sm:h-96" aria-hidden="true">
@@ -17,7 +18,10 @@ export function AuthShell({ children, step }: { children: ReactNode; step?: 1 | 
           <SchoolBadge className="mt-3" />
         </div>
         {step ? <Stepper step={step} /> : null}
-        <div className="card animate-rise p-6 shadow-lift sm:p-7">{children}</div>
+        <div className="card relative animate-rise p-6 shadow-lift sm:p-7">
+          {corner ? <div className="absolute -end-3 -top-10 z-10 sm:-end-8 sm:-top-12">{corner}</div> : null}
+          {children}
+        </div>
       </div>
     </main>
   );

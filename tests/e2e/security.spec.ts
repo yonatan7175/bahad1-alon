@@ -168,3 +168,16 @@ test("an external app may be framed ONLY on its own page", async ({ page }) => {
     expect(r!.headers()["content-security-policy"], p).toMatch(/frame-src 'self';/);
   }
 });
+
+test("דבר הקב״מית is public (read before registering) but nothing else became public", async ({ page }) => {
+  // The "אושר קב״ם" stamp on the sign-in page leads to the guidelines, without signing in.
+  await page.goto("/signin");
+  await page.getByRole("link", { name: /אושר קב״ם/ }).click();
+  await expect(page).toHaveURL(/\/kabam$/);
+  await expect(page.getByRole("heading", { level: 1, name: "דבר הקב״מית" })).toBeVisible();
+  await expect(page.locator("#registration")).toContainText("שם פרטי בלבד");
+  await expect(page.locator("#sites")).toContainText("אישור קב״מית");
+  // A look-alike path is still behind sign-in.
+  await page.goto("/kabamx");
+  await expect(page).toHaveURL(/\/signin\?next=%2Fkabamx/);
+});

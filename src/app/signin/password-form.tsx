@@ -1,11 +1,12 @@
 "use client";
 import { startTransition, useActionState, useState, type FormEvent } from "react";
-import { KeyRound, UserPlus } from "lucide-react";
+import Link from "next/link";
+import { KeyRound, ShieldAlert, UserPlus } from "lucide-react";
 import { passwordRegister, passwordSignIn, type PasswordState } from "./password-actions";
 
 /** Sign in / create an account with a username and password (next to the Google button). */
-export function PasswordForm({ next }: { next: string }) {
-  const [mode, setMode] = useState<"signin" | "register">("signin");
+export function PasswordForm({ next, initialMode = "signin" }: { next: string; initialMode?: "signin" | "register" }) {
+  const [mode, setMode] = useState<"signin" | "register">(initialMode);
   const [signInState, signIn, signingIn] = useActionState<PasswordState, FormData>(passwordSignIn, {});
   const [registerState, register, registering] = useActionState<PasswordState, FormData>(passwordRegister, {});
   const [username, setUsername] = useState("");
@@ -48,6 +49,18 @@ export function PasswordForm({ next }: { next: string }) {
           </button>
         ))}
       </div>
+
+      {isRegister ? (
+        <p className="mt-3 flex items-start gap-2 rounded-ctl border border-[var(--brand-red)]/25 bg-danger-soft/60 px-3 py-2.5 text-[13px] leading-relaxed text-fg">
+          <ShieldAlert className="mt-0.5 size-4 shrink-0 text-[var(--brand-red)]" aria-hidden="true" />
+          <span>
+            <b>בעלי סיווג 1</b> נרשמים רק כאן, ובשלב הבא ממלאים <b>שם פרטי בלבד</b>.{" "}
+            <Link href="/kabam" className="font-semibold text-accent underline-offset-4 hover:underline">
+              דבר הקב״מית
+            </Link>
+          </span>
+        </p>
+      ) : null}
 
       <form onSubmit={submit} className="mt-3" data-testid={isRegister ? "password-register" : "password-signin"}>
         <input type="hidden" name="next" value={next} />

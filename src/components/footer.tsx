@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { APP_NAME, SCHOOL_NAME, SITE_SHORT_NAME } from "@/lib/site";
 import { Emblem, Ribbon } from "./brand";
 
@@ -10,6 +11,10 @@ export function Footer() {
         <p className="font-semibold text-muted">
           <span className="font-black text-accent-ink">{APP_NAME}</span> · {SCHOOL_NAME} · {SITE_SHORT_NAME}
         </p>
+        <span className="h-3 w-px bg-line-strong" aria-hidden="true" />
+        <Link href="/kabam" className="inline-flex min-h-11 items-center font-semibold text-muted underline-offset-4 hover:text-fg hover:underline">
+          דבר הקב״מית
+        </Link>
       </div>
     </footer>
   );

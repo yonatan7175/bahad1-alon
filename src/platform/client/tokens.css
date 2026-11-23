@@ -21,6 +21,8 @@
   --gold: #a87a16;
   --gold-soft: #f6ecd3;
   --brand-red: #c8102e;
+  --stamp-ink: #b8122f;
+  --stamp-blend: normal;
   --danger: #b42318;
   --danger-soft: #fdeceb;
   --success: #1d7a43;
@@ -60,6 +62,8 @@
     --gold: #e2bd5f;
     --gold-soft: #2a2312;
     --brand-red: #ff5a6e;
+    --stamp-ink: #ff6f80;
+    --stamp-blend: normal;
     --danger: #f2877d;
     --danger-soft: #34160f;
     --success: #6fd394;
@@ -95,6 +99,8 @@
   --gold: #e2bd5f;
   --gold-soft: #2a2312;
   --brand-red: #ff5a6e;
+  --stamp-ink: #ff6f80;
+  --stamp-blend: normal;
   --danger: #f2877d;
   --danger-soft: #34160f;
   --success: #6fd394;

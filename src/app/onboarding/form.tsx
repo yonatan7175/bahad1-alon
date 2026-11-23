@@ -1,5 +1,6 @@
 "use client";
 import { startTransition, useActionState, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { MAX_TEAM } from "@/lib/validate";
 import { saveOnboarding, type OnboardingState } from "./actions";
 
@@ -38,7 +39,14 @@ export function OnboardingForm({
       <label className="label mt-0" htmlFor="name">
         שם מלא בעברית
       </label>
-      <input id="name" name="name" required minLength={2} maxLength={40} value={name} onChange={(e) => setName(e.target.value)} className="field" autoComplete="name" />
+      <input id="name" name="name" required minLength={2} maxLength={40} value={name} onChange={(e) => setName(e.target.value)} className="field" autoComplete="name" aria-describedby="name-hint" />
+      <p id="name-hint" className="hint">
+        בעלי סיווג 1: <b>שם פרטי בלבד</b> (לפי{" "}
+        <Link href="/kabam" className="font-semibold text-accent underline-offset-4 hover:underline">
+          דבר הקב״מית
+        </Link>
+        ).
+      </p>
 
       <div className="grid grid-cols-2 gap-3">
         <div>

@@ -51,6 +51,7 @@
   --animate-rise: rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-fade: fade 0.3s ease both;
   --animate-pop: pop 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-stamp: stamp 0.55s cubic-bezier(0.3, 1.5, 0.5, 1) 0.35s both;
 
   @keyframes rise {
     from {
@@ -68,6 +69,22 @@
     }
     to {
       opacity: 1;
+    }
+  }
+  /* rubber stamp pressed onto the page: drops in large, lands with a small bounce */
+  @keyframes stamp {
+    from {
+      opacity: 0;
+      transform: scale(1.9);
+      filter: blur(2px);
+    }
+    60% {
+      opacity: 1;
+      filter: none;
+    }
+    to {
+      opacity: 1;
+      transform: none;
     }
   }
   @keyframes pop {
@@ -258,6 +275,12 @@
     opacity: 0.1;
     background: url("/brand/bahad1.svg") center / contain no-repeat;
     filter: grayscale(1) brightness(3);
+  }
+  /* "אושר קב״ם" stamp ink: printed red, multiplied into the paper in light mode */
+  .stamp-ink {
+    color: var(--stamp-ink);
+    mix-blend-mode: var(--stamp-blend);
+    opacity: 0.92;
   }
   .hero-gold {
     color: var(--hero-gold);

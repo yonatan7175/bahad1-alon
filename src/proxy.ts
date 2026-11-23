@@ -19,7 +19,8 @@ function frameSrc(pathname: string): string {
   return ext ? `'self' ${ext}` : "'self'";
 }
 
-const PUBLIC_PREFIXES = ["/signin", "/auth/", "/blocked", "/api/"];
+// /kabam = דבר הקב״מית: the security officer's guidelines, linked from the sign-in page (read before registering).
+const PUBLIC_PREFIXES = ["/signin", "/auth/", "/blocked", "/api/", "/kabam"];
 
 function isPublic(pathname: string) {
   return PUBLIC_PREFIXES.some((p) => (p.endsWith("/") ? pathname.startsWith(p) : pathname === p || pathname.startsWith(p + "/")));
