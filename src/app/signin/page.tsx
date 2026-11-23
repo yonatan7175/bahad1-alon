@@ -21,7 +21,7 @@ export default async function SignIn(props: PageProps<"/signin">) {
   const mode = authMode();
 
   return (
-    <AuthShell corner={<KabamStamp href="/kabam" size={96} animate />}>
+    <AuthShell corner={<KabamStamp href="/kabam" size={125} animate />}>
       <h1 className="text-center text-2xl font-extrabold">ברוכים הבאים</h1>
       <p className="mt-2 text-center text-muted">כל הכלים של הגדוד במקום אחד.</p>
       {sp.error ? (

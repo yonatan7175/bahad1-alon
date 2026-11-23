@@ -7,7 +7,7 @@ import { APP_NAME } from "@/lib/site";
 /** corner: something pinned over the card's top end corner (the "אושר קב״ם" stamp on the sign-in page). */
 export function AuthShell({ children, step, corner }: { children: ReactNode; step?: 1 | 2 | 3; corner?: ReactNode }) {
   return (
-    <main className="relative flex-1">
+    <main className="relative flex-1 overflow-x-clip">
       <div className="hero absolute inset-x-0 top-0 h-80 sm:h-96" aria-hidden="true">
         <Ribbon className="absolute inset-x-0 bottom-0" />
       </div>
@@ -19,7 +19,7 @@ export function AuthShell({ children, step, corner }: { children: ReactNode; ste
         </div>
         {step ? <Stepper step={step} /> : null}
         <div className="card relative animate-rise p-6 shadow-lift sm:p-7">
-          {corner ? <div className="absolute -end-3 -top-10 z-10 sm:-end-8 sm:-top-12">{corner}</div> : null}
+          {corner ? <div className="absolute -end-4 -top-[4.5rem] z-10 sm:-end-10 sm:-top-16">{corner}</div> : null}
           {children}
         </div>
       </div>
