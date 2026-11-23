@@ -15,6 +15,10 @@ export function Footer() {
         <Link href="/kabam" className="inline-flex min-h-11 items-center font-semibold text-muted underline-offset-4 hover:text-fg hover:underline">
           דבר הקב״מית
         </Link>
+        <span className="h-3 w-px bg-line-strong" aria-hidden="true" />
+        <Link href="/develop" className="inline-flex min-h-11 items-center font-semibold text-muted underline-offset-4 hover:text-fg hover:underline">
+          פיתוח
+        </Link>
       </div>
     </footer>
   );

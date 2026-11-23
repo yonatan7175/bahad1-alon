@@ -388,8 +388,8 @@
   background: rgb(255 255 255 / 0.18);
 }
 
-/* Room for the phone bottom tab bar (only on pages that render it). */
-@media (width < 48rem) {
+/* Room for the bottom tab bar (phones and tablets, below lg — only on pages that render it). */
+@media (width < 64rem) {
   body:has(.bottom-nav) {
     padding-bottom: calc(64px + env(safe-area-inset-bottom));
   }

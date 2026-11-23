@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, House, Lightbulb, LogOut, ShieldCheck, UserRound, UsersRound } from "lucide-react";
+import { ChevronDown, Code2, House, Lightbulb, LogOut, ShieldCheck, UserRound, UsersRound } from "lucide-react";
 import { Avatar } from "./avatar";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -86,6 +86,9 @@ export function UserMenu({ user }: { user: MenuUser }) {
             ) : null}
             <Link role="menuitem" href="/feedback" className="menu-item">
               <Lightbulb aria-hidden="true" /> שינויים ושיפורים
+            </Link>
+            <Link role="menuitem" href="/develop" className="menu-item">
+              <Code2 aria-hidden="true" /> פיתוח אפליקציות
             </Link>
           </div>
           <div className="mt-1.5 border-t border-line px-1.5 pb-1 pt-3">

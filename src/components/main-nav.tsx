@@ -2,7 +2,7 @@
 // Main navigation. Desktop: inline links in the header. Phone: a bottom tab bar (thumb reach).
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House, Lightbulb, ShieldCheck, UserRound, UsersRound, type LucideIcon } from "lucide-react";
+import { Code2, House, Lightbulb, ShieldCheck, UserRound, UsersRound, type LucideIcon } from "lucide-react";
 
 interface NavProps {
   canAdmin: boolean;
@@ -22,6 +22,7 @@ function items({ canAdmin, pending, feedback }: NavProps): Item[] {
     { href: "/", label: "דף הבית", short: "בית", icon: House },
     { href: "/people", label: "אנשים", short: "אנשים", icon: UsersRound },
     { href: "/feedback", label: "שינויים ושיפורים", short: "שיפורים", icon: Lightbulb, badge: feedback },
+    { href: "/develop", label: "פיתוח", short: "פיתוח", icon: Code2 },
   ];
   if (canAdmin) list.push({ href: "/admin", label: "ניהול", short: "ניהול", icon: ShieldCheck, badge: pending });
   else list.push({ href: "/profile", label: "הפרופיל שלי", short: "פרופיל", icon: UserRound });
@@ -33,7 +34,7 @@ const isActive = (pathname: string, href: string) => (href === "/" ? pathname ==
 export function MainNav(props: NavProps) {
   const pathname = usePathname();
   return (
-    <nav aria-label="ניווט ראשי" className="hidden flex-1 items-center justify-center gap-1 md:flex">
+    <nav aria-label="ניווט ראשי" className="hidden flex-1 items-center justify-center gap-1 lg:flex">
       {items(props).map((it) => {
         const active = isActive(pathname, it.href);
         return (
@@ -41,7 +42,7 @@ export function MainNav(props: NavProps) {
             key={it.href}
             href={it.href}
             aria-current={active ? "page" : undefined}
-            className={`relative inline-flex min-h-10 items-center gap-2 rounded-full px-3.5 text-sm font-bold transition-colors ${
+            className={`relative inline-flex min-h-10 items-center gap-2 whitespace-nowrap rounded-full px-3.5 text-sm font-bold transition-colors ${
               active ? "bg-accent-soft text-accent-ink" : "text-muted hover:bg-surface-2 hover:text-fg"
             }`}
           >
@@ -61,7 +62,7 @@ export function BottomNav(props: NavProps) {
   return (
     <nav
       aria-label="ניווט ראשי"
-      className="bottom-nav glass fixed inset-x-0 bottom-0 z-30 border-t border-line/70 pb-[env(safe-area-inset-bottom)] md:hidden"
+      className="bottom-nav glass fixed inset-x-0 bottom-0 z-30 border-t border-line/70 pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       <ul className="mx-auto grid max-w-md" style={{ gridTemplateColumns: `repeat(${list.length}, minmax(0, 1fr))` }}>
         {list.map((it) => {
