@@ -22,7 +22,8 @@ export async function saveOnboarding(_prev: OnboardingState, form: FormData): Pr
   const team = teamPlatoonName(String(form.get("team") ?? ""));
   if (!team) return { error: "יש להזין מספר צוות (1–30)." };
   const phone = normalizePhone(String(form.get("phone") ?? ""));
-  if (!phone) return { error: "יש להזין טלפון נייד תקין (למשל 050-1234567)." };
+  // Optional: empty = no phone (null); only a wrong number is refused.
+  if (phone === undefined) return { error: "מספר הטלפון לא תקין (נייד ישראלי, למשל 050-1234567). אפשר גם להשאיר ריק." };
   const db = await getDb();
   const c = await db.query("select 1 from public.companies where id::text = $1", [companyId]);
   if (!c.rows.length) return { error: "יש לבחור פלוגה." };

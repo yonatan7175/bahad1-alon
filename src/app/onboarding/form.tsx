@@ -97,14 +97,13 @@ export function OnboardingForm({
       />
 
       <label className="label" htmlFor="phone">
-        טלפון נייד
+        טלפון נייד <span className="font-normal text-muted">(לא חובה)</span>
       </label>
       <input
         id="phone"
         name="phone"
         type="tel"
         inputMode="tel"
-        required
         dir="ltr"
         placeholder="050-1234567"
         value={phone}

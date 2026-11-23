@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BadgeCheck, Bell, ChevronLeft, DoorOpen, Palette, Phone, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Bell, ChevronLeft, DoorOpen, KeyRound, Palette, Phone, ShieldCheck } from "lucide-react";
 import { requireApproved } from "@/platform/auth/session";
 import { getDb } from "@/platform/server/db";
 import { loadOverrides, visibleApps } from "@/platform/server/registry";
@@ -14,6 +14,8 @@ import { NotificationsToggle } from "./notifications";
 import { PhoneForm } from "./phone-form";
 import { RoomForm } from "./room-form";
 import { PrivacyToggles } from "./privacy-toggles";
+import { PasswordChangeForm } from "./password-form";
+import { usernameOf } from "@/platform/auth/password";
 import { MyPositionsList } from "../roles/positions-ui";
 import { myPositions, positionLabel } from "@/platform/server/positions";
 import type { ReactNode } from "react";
@@ -37,6 +39,7 @@ export default async function ProfilePage() {
   const p = session.profile;
   const db = await getDb();
   const positions = await myPositions(db, p.id);
+  const username = await usernameOf(db, p.id);
   const contactApps = visibleApps(p.role, await loadOverrides(db))
     .map((x) => x.app)
     .filter((a) => a.effectiveScopes.includes("contact"));
@@ -63,7 +66,7 @@ export default async function ProfilePage() {
                 <span>{unit}</span>
               </p>
               <p className="mt-1 truncate text-sm text-subtle" dir="ltr">
-                {p.email}
+                {p.email || (username ? `@${username}` : "")}
               </p>
             </div>
           </div>
@@ -119,6 +122,15 @@ export default async function ProfilePage() {
             )}
             <p className="mt-3 text-xs text-subtle">כל אפליקציה מקבלת שם ותמונה. ההרשאות של כל אפליקציה מופיעות בתפריט ⋮ ← &quot;על האפליקציה&quot;.</p>
           </Section>
+
+          {username ? (
+            <Section icon={<KeyRound aria-hidden="true" />} title="סיסמה">
+              <p className="mb-3 text-sm text-muted">
+                שם המשתמש שלך: <span dir="ltr" className="font-semibold text-fg">{username}</span>
+              </p>
+              <PasswordChangeForm />
+            </Section>
+          ) : null}
 
           <SignOutButton className="btn-secondary w-full text-danger" />
         </div>

@@ -53,6 +53,11 @@ export function googleConfig() {
   return { clientId, clientSecret, sessionSecret, siteUrl: env("NEXT_PUBLIC_SITE_URL")?.replace(/\/$/, "") };
 }
 
+/** Username + password sign-in next to Google. Only with our own identity table (BAHAD_AUTH=google); BAHAD_PASSWORD_LOGIN=0 turns it off. */
+export function passwordLoginEnabled(): boolean {
+  return authMode() === "google" && env("BAHAD_PASSWORD_LOGIN") !== "0";
+}
+
 export function databaseUrl(): string | undefined {
   return env("DATABASE_URL");
 }

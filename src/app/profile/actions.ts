@@ -3,6 +3,8 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "@/platform/auth/session";
 import { getDb } from "@/platform/server/db";
 import { normalizePhone, normalizeRoom } from "@/lib/validate";
+import { changePassword } from "@/platform/auth/password";
+import { audit } from "@/platform/server/audit";
 
 export async function savePhone(_prev: { error?: string; ok?: boolean }, form: FormData): Promise<{ error?: string; ok?: boolean }> {
   const s = await getSession();
@@ -35,3 +37,15 @@ export async function saveRoom(_prev: { error?: string; ok?: boolean }, form: Fo
   return { ok: true };
 }
 
+
+export async function savePassword(_prev: { error?: string; ok?: boolean }, form: FormData): Promise<{ error?: string; ok?: boolean }> {
+  const s = await getSession();
+  if (!s || s.profile.status !== "approved") return { error: "צריך להתחבר מחדש." };
+  const next = String(form.get("password") ?? "");
+  if (next !== String(form.get("confirm") ?? "")) return { error: "הסיסמאות החדשות לא תואמות." };
+  const db = await getDb();
+  const error = await changePassword(db, s.profile.id, String(form.get("current") ?? ""), next);
+  if (error) return { error };
+  await audit(db, s.profile.id, "user.password_change", s.profile.id, {});
+  return { ok: true };
+}

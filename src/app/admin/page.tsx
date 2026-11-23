@@ -27,6 +27,7 @@ const TABS = [
 interface UserRow {
   id: string;
   email: string;
+  username: string | null;
   full_name: string | null;
   role: string;
   status: string;
@@ -162,8 +163,9 @@ async function UsersTab({
   platoons: { id: string; name: string; company_id: string }[];
 }) {
   const base = `select p.id, p.email, p.full_name, p.role, p.status, p.company_id, p.platoon_id, c.name as company_name, pl.name as platoon_name,
-                       p.phone, p.room, p.created_at, p.onboarded_at, p.last_seen_at
-                  from public.profiles p left join public.companies c on c.id = p.company_id left join public.platoons pl on pl.id = p.platoon_id`;
+                       p.phone, p.room, p.created_at, p.onboarded_at, p.last_seen_at, pw.username
+                  from public.profiles p left join public.companies c on c.id = p.company_id left join public.platoons pl on pl.id = p.platoon_id
+                  left join public.password_logins pw on pw.user_id = p.id`;
   const pending = (
     await db.query<UserRow>(
       `${base} where p.status = 'pending' ${isAdmin ? "" : "and p.company_id = $1"} order by p.onboarded_at nulls last, p.created_at`,
@@ -173,7 +175,7 @@ async function UsersTab({
   const all = isAdmin
     ? (
         await db.query<UserRow>(
-          `${base} where p.status <> 'pending' and ($1 = '' or p.full_name ilike '%' || $1 || '%' or p.email ilike '%' || $1 || '%')
+          `${base} where p.status <> 'pending' and ($1 = '' or p.full_name ilike '%' || $1 || '%' or p.email ilike '%' || $1 || '%' or pw.username ilike '%' || $1 || '%')
             order by p.status, c.sort nulls first, pl.name nulls first, p.full_name limit 300`,
           [q],
         )
@@ -200,7 +202,7 @@ async function UsersTab({
                 <p className="font-bold">{u.full_name ?? "(ללא שם)"}</p>
                 <p className="text-sm text-muted">
                   {[u.company_name, u.platoon_name, u.room ? `חדר ${u.room}` : null].filter(Boolean).join(" · ") || "לא מילא/ה פרטים"} ·{" "}
-                  <span dir="ltr">{u.email}</span>
+                  <span dir="ltr">{u.email || (u.username ? `@${u.username}` : "")}</span>
                   {u.phone ? (
                     <>
                       {" · "}
@@ -239,7 +241,7 @@ async function UsersTab({
               חיפוש
             </label>
             <Search className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-subtle" aria-hidden="true" />
-            <input id="q" name="q" defaultValue={q} placeholder="חיפוש לפי שם או אימייל" className="field ps-10" />
+            <input id="q" name="q" defaultValue={q} placeholder="חיפוש לפי שם, אימייל או שם משתמש" className="field ps-10" />
             <button className="btn-secondary" type="submit">
               חיפוש
             </button>
@@ -264,7 +266,7 @@ async function UsersTab({
                   </summary>
                   <div className="border-t border-line bg-bg-elevated px-4 pb-4 pt-3 text-sm">
                     <p className="text-muted">
-                      <span dir="ltr">{u.email}</span>
+                      <span dir="ltr">{u.email || (u.username ? `@${u.username}` : "")}</span>
                       {u.phone ? (
                         <>
                           {" · "}

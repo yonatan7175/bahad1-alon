@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { CircleAlert, FlaskConical, UserPlus } from "lucide-react";
 import { getSession, safeNext } from "@/platform/auth/session";
-import { authMode } from "@/platform/server/config";
+import { authMode, passwordLoginEnabled } from "@/platform/server/config";
 import { ROLE_LABEL, STATUS_LABEL } from "@/lib/site";
 import { AuthShell } from "@/components/auth-shell";
 import { Avatar } from "@/components/avatar";
 import { GoogleSignInButton } from "./google-button";
+import { PasswordForm } from "./password-form";
 
 export const metadata: Metadata = { title: "התחברות" };
 
@@ -28,6 +29,14 @@ export default async function SignIn(props: PageProps<"/signin">) {
         </p>
       ) : null}
       <div className="mt-6">{mode === "mock" ? <MockSignIn next={next} /> : <GoogleSignInButton next={next} direct={mode === "google"} />}</div>
+      {mode !== "mock" && passwordLoginEnabled() ? (
+        <>
+          <p className="my-5 flex items-center gap-3 text-sm text-muted" aria-hidden="true">
+            <span className="h-px flex-1 bg-line" /> או עם שם משתמש וסיסמה <span className="h-px flex-1 bg-line" />
+          </p>
+          <PasswordForm next={next} />
+        </>
+      ) : null}
       <p className="mt-6 border-t border-line pt-4 text-center text-sm font-bold tracking-wide text-accent-ink">כל הטכנולוגיה של הבית במקום אחד</p>
     </AuthShell>
   );
