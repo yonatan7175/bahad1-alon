@@ -14,7 +14,7 @@ export const CONTACT_URL = process.env.NEXT_PUBLIC_CONTACT_URL || (REPO_URL ? `$
 export const THEME_COLOR = process.env.NEXT_PUBLIC_THEME_COLOR || "#0b1a33";
 
 export const ROLE_LABEL: Record<string, string> = { cadet: "חניך/ה", commander: "מפקד/ת", admin: "מנהל/ת" };
-export const STATUS_LABEL: Record<string, string> = { pending: "ממתין לאישור", approved: "מאושר", blocked: "חסום" };
+export const STATUS_LABEL: Record<string, string> = { pending: "מחכה לאישור מנהל", approved: "מאושר", blocked: "חסום" };
 export const SCOPE_LABEL: Record<string, string> = {
   profile: "שם ותמונה",
   role: "תפקיד (חניך/מפקד/מנהל)",

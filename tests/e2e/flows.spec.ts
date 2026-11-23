@@ -2,7 +2,7 @@
 import { expect, test } from "@playwright/test";
 import { api, newUserPage, signIn } from "./helpers";
 
-test("new user: sign-in → onboarding → account created right away → home", async ({ browser }) => {
+test("new user: sign-in → onboarding → מחכה לאישור מנהל → admin approves → home", async ({ browser }) => {
   const u = await (await browser.newContext()).newPage();
   await u.goto("/");
   await expect(u).toHaveURL(/\/signin/);
@@ -21,25 +21,35 @@ test("new user: sign-in → onboarding → account created right away → home",
   await u.locator("#team").fill("3");
   await u.locator("#room").fill("241");
   await u.locator("#phone").fill("0521234567");
-  await u.getByRole("button", { name: "סיום הרשמה וכניסה" }).click();
+  await u.getByRole("button", { name: "שליחה לאישור" }).click();
   await expect(u.locator("form [role=alert]")).toContainText("שם מלא בעברית");
   // the typed values survive the failed submit
   await expect(u.locator("#company")).toHaveValue(/.+/);
   await expect(u.locator("#phone")).toHaveValue("0521234567");
 
-  // Open registration (default; BAHAD_REQUIRE_APPROVAL=1 brings back admin approval): straight in.
+  // Approval (default; BAHAD_REQUIRE_APPROVAL=0 makes registration open): wait for an admin.
   await u.locator("#name").fill("משתמשת חדשה");
-  await u.getByRole("button", { name: "סיום הרשמה וכניסה" }).click();
-  await expect(u).toHaveURL((url) => url.pathname === "/");
+  await u.getByRole("button", { name: "שליחה לאישור" }).click();
+  await expect(u).toHaveURL((url) => url.pathname === "/pending");
+  await expect(u.getByTestId("account-status")).toHaveText("מחכה לאישור מנהל");
+  // still locked out of the site until approved
+  await u.goto("/");
+  await expect(u).toHaveURL((url) => url.pathname === "/pending");
+
+  const admin = await newUserPage(browser, "admin@example.com", "/admin?tab=users");
+  const row = admin.page.getByTestId("pending-user").filter({ hasText: "משתמשת חדשה" });
+  await row.getByRole("button", { name: "אישור" }).click();
+  await admin.page.waitForURL(/ok=/);
+
+  await u.goto("/");
   await expect(u.locator("h1")).toContainText("משתמשת");
   const me = await api<{ name: string; company: { name: string }; room: string }>(u, "dorm", "user.me");
   expect(me.result?.name).toBe("משתמשת חדשה");
   expect(me.result?.company.name).toBe("פלוגה ב'");
   expect(me.result?.room).toBe("241");
 
-  // the audit log records the automatic approval
-  const admin = await newUserPage(browser, "admin@example.com", "/admin?tab=audit");
-  await expect(admin.page.locator("tr", { hasText: "user.auto_approve" }).first()).toContainText("משתמשת חדשה");
+  await admin.page.goto("/admin?tab=audit");
+  await expect(admin.page.locator("tr", { hasText: "user.approve" }).first()).toContainText("משתמשת חדשה");
   await admin.ctx.close();
 });
 

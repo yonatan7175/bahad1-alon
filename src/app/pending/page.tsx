@@ -7,7 +7,7 @@ import { AuthShell } from "@/components/auth-shell";
 import { SignOutButton } from "@/components/sign-out-button";
 import { RefreshButton } from "@/components/refresh-button";
 
-export const metadata: Metadata = { title: "ממתין לאישור" };
+export const metadata: Metadata = { title: "מחכה לאישור מנהל" };
 
 export default async function Pending() {
   const s = await getSession();
@@ -22,10 +22,16 @@ export default async function Pending() {
         <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-gold-soft text-gold">
           <Hourglass className="size-7 animate-pulse" aria-hidden="true" />
         </span>
-        <h1 className="mt-4 text-2xl font-extrabold">ממתינים לאישור</h1>
+        <h1 className="mt-4 text-2xl font-extrabold">מחכה לאישור מנהל</h1>
         <p className="mt-2 text-muted">הפרטים נשלחו. ברגע שמנהל יאשר — האתר ייפתח עבורך.</p>
       </div>
       <dl className="mt-5 divide-y divide-line rounded-ctl border border-line text-sm">
+        <div className="flex items-center justify-between gap-2 px-4 py-3">
+          <dt className="text-muted">סטטוס</dt>
+          <dd data-testid="account-status">
+            <span className="badge-warning">מחכה לאישור מנהל</span>
+          </dd>
+        </div>
         <div className="flex justify-between gap-2 px-4 py-3">
           <dt className="text-muted">שם</dt>
           <dd className="font-semibold">{p.full_name}</dd>

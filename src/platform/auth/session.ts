@@ -54,7 +54,7 @@ export const getSession = cache(async (): Promise<Session | null> => {
     await audit(db, auth.id, "user.bootstrap_admin", auth.id, { email: auth.email });
     profile = (await loadFull(auth.id))!;
   }
-  // Open registration (default): whoever finished registering is approved — including users who
+  // Open registration (BAHAD_REQUIRE_APPROVAL=0): whoever finished registering is approved — including users who
   // registered while approval was still required. Blocked users stay blocked.
   if (profile.status === "pending" && profile.onboarded_at && !requireApproval()) {
     await db.query("update public.profiles set status = 'approved', approved_at = coalesce(approved_at, now()) where id = $1 and status = 'pending'", [auth.id]);
