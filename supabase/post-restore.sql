@@ -7,7 +7,8 @@ create or replace trigger on_auth_user_created after insert on auth.users
 
 revoke all on public.companies, public.platoons, public.app_records, public.app_overrides,
   public.push_subscriptions, public.push_queue, public.rate_counters, public.audit_log, public.app_managers, public.app_submissions, public.feedback,
-  public.positions, public.position_apps, public.position_holders, public.password_logins
+  public.positions, public.position_apps, public.position_holders, public.password_logins,
+  public.oauth_codes, public.oauth_tokens, public.oauth_consents
   from anon, authenticated;
 revoke all on public.profiles from anon, authenticated;
 grant select on public.profiles to authenticated;

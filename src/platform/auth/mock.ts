@@ -78,6 +78,13 @@ export async function ensureDevSeed(): Promise<void> {
           where id = $1`,
         [u.rows[0].id, name, role, status, c ? companies[c] : null, c && p ? platoons[`${c}/${p}`] : null, status === "approved" ? new Date() : null],
       );
+      // The commander also holds the קב״מית position, so the website approval flow can be tried locally.
+      if (email === "commander@example.com") {
+        await t.query(
+          "insert into public.position_holders (position_id, profile_id, status) select id, $1, 'approved' from public.positions where key = 'kabam'",
+          [u.rows[0].id],
+        );
+      }
     }
   });
 }

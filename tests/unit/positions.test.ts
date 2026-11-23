@@ -30,12 +30,12 @@ const sees = async (u: TestUser) => ((await call(u, "data.list", { collection: "
 const mine = async (u: TestUser) => (await P.myPositions(db, u.id)).find((p) => p.id === pos)!;
 
 describe("positions", () => {
-  it("ships with קא\"ר, קל\"פ and קל\"ג; the logistics ones manage dorm + laundry", async () => {
+  it("ships with קב״מית, קא\"ר, קל\"פ and קל\"ג; the logistics ones manage dorm + laundry", async () => {
     const fresh = await testDb();
     const list = await P.listPositions(fresh);
-    expect(list.map((p) => p.name)).toEqual(['קא"ר', 'קל"פ', 'קל"ג']);
+    expect(list.map((p) => p.name)).toEqual(["קב״מית", 'קא"ר', 'קל"פ', 'קל"ג']);
     expect(list.find((p) => p.name === 'קל"ג')!.apps).toEqual(["app:dorm", "app:laundry"]);
-    expect(list.map((p) => p.scope)).toEqual(["company", "company", "battalion"]); // קא"ר, קל"פ פלוגתי; קל"ג גדודי
+    expect(list.map((p) => p.scope)).toEqual(["battalion", "company", "company", "battalion"]); // קב״מית גדודי; קא"ר, קל"פ פלוגתי; קל"ג גדודי
     await fresh.close();
   });
 

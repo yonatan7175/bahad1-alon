@@ -8,6 +8,7 @@ import { getDb } from "@/platform/server/db";
 import { audit } from "@/platform/server/audit";
 import { effectiveStatus, getApp, loadOverride } from "@/platform/server/registry";
 import { recordEmbedProbe } from "@/platform/server/submissions";
+import { isKabam } from "@/platform/auth/connect";
 import { MAX_PENDING_PER_USER, SUBMISSION_EMOJIS, cleanText, normalizeGithubRepo, normalizeSiteUrl, validIconDataUrl } from "@/lib/submissions";
 
 const PATH = "/a/add-app";
@@ -76,13 +77,17 @@ export async function submitApp(form: FormData) {
   );
   if (dup[0]) back({ error: dup[0].status === "approved" ? "הקישור הזה כבר נמצא באתר" : "מישהו כבר הציע את הקישור הזה — הוא ממתין לאישור" }, kind);
 
+  // "התחברות עם צ1" (websites only). Asking for the directory needs the קב״מית's approval.
+  const connect = kind === "url" && form.get("connect") === "on";
+  const wantDirectory = connect && form.get("want_directory") === "on";
   const { rows: ins } = await db.query<{ id: string }>(
-    "insert into public.app_submissions (kind, name, description, url, emoji, icon, submitted_by) values ($1, $2, $3, $4, $5, $6, $7) returning id",
-    [kind, name, description, url, emoji, icon, s.profile.id],
+    `insert into public.app_submissions (kind, name, description, url, emoji, icon, submitted_by, connect, want_directory, kabam_status)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id`,
+    [kind, name, description, url, emoji, icon, s.profile.id, connect, wantDirectory, kind === "url" ? "pending" : null],
   );
   // So the admin already sees whether the site can open inside the portal.
   if (kind === "url" && ins[0]) await recordEmbedProbe(db, ins[0].id, url);
-  back({ ok: "ההצעה נשלחה — מנהל האתר יאשר או ידחה אותה" }, kind);
+  back({ ok: kind === "url" ? "ההצעה נשלחה — הקב״מית ומנהל האתר יאשרו אותה" : "ההצעה נשלחה — מנהל האתר יאשר או ידחה אותה" }, kind);
 }
 
 /** The submitter withdraws a suggestion that is still pending. */
@@ -99,6 +104,11 @@ export async function reviewSubmission(form: FormData) {
   const decision = form.get("decision") === "approve" ? "approved" : "rejected";
   const note = cleanText(form.get("note"), 200) || null;
   const db = await getDb();
+  // The קב״מית's directive (/kabam): a website goes live only after her separate approval.
+  const { rows: cur } = await db.query<{ kind: string; kabam_status: string | null }>("select kind, kabam_status from public.app_submissions where id = $1", [sid]);
+  if (decision === "approved" && cur[0]?.kind === "url" && cur[0].kabam_status !== null && cur[0].kabam_status !== "approved") {
+    back({ error: "אי אפשר לאשר עדיין — האתר צריך קודם אישור קב״מית" });
+  }
   const { rows } = await db.query<{ kind: string; name: string; url: string }>(
     `update public.app_submissions set status = $2, review_note = $3, reviewed_by = $4, reviewed_at = now()
       where id = $1 and status = 'pending' returning kind, name, url`,
@@ -175,4 +185,50 @@ export async function setEmbedMode(form: FormData) {
   if (!rows[0]) back({ error: "לא נמצא" });
   await audit(db, s.profile.id, "app.submission.embed_mode", sid, { mode, name: rows[0].name });
   back({ ok: mode === "tab" ? `"${rows[0].name}" ייפתח בלשונית חדשה` : mode === "frame" ? `"${rows[0].name}" ייפתח תמיד בתוך האתר` : `"${rows[0].name}" — לפי הבדיקה האוטומטית` });
+}
+
+/**
+ * The קב״מית's decision on a website (holders of the קב״מית position only — not admins as such).
+ * decision: approve / reject. `directory` grants the battalion directory to a connected site that asked
+ * for it. She can also take an approval back later ("revoke"): the site's tokens stop working at once.
+ */
+export async function kabamReview(form: FormData) {
+  const s = await requireUser();
+  const db = await getDb();
+  if (!(await isKabam(db, s.profile.id))) back({ error: "רק הקב״מית יכולה לאשר אתרים" });
+  const sid = id(form);
+  const decision = String(form.get("decision") ?? "");
+  const note = cleanText(form.get("note"), 200) || null;
+  const directory = form.get("directory") === "on";
+  if (decision === "approve" || decision === "reject") {
+    const { rows } = await db.query<{ name: string; directory_allowed: boolean }>(
+      `update public.app_submissions
+          set kabam_status = $2, kabam_note = $3, kabam_by = $4, kabam_at = now(),
+              directory_allowed = ($2 = 'approved' and connect and want_directory and $5)
+        where id = $1 and kind = 'url' and status = 'pending' and kabam_status = 'pending'
+        returning name, directory_allowed`,
+      [sid, decision === "approve" ? "approved" : "rejected", note, s.profile.id, directory],
+    );
+    if (!rows[0]) back({ error: "ההצעה כבר טופלה" });
+    // A rejection by the קב״מית closes the suggestion.
+    if (decision === "reject") {
+      await db.query("update public.app_submissions set status = 'rejected', review_note = coalesce(review_note, $2) where id = $1", [sid, note ? `קב״מית: ${note}` : "לא אושר ע״י הקב״מית"]);
+    }
+    await audit(db, s.profile.id, `app.submission.kabam_${decision}`, sid, { name: rows[0].name, directory: rows[0].directory_allowed });
+    back({ ok: decision === "approve" ? `"${rows[0].name}" אושר ע״י הקב״מית — עכשיו מנהל האתר יכול להוסיף אותו` : `"${rows[0].name}" לא אושר` });
+  }
+  if (decision === "directory" || decision === "revoke") {
+    const { rows } = await db.query<{ name: string }>(
+      decision === "directory"
+        ? "update public.app_submissions set directory_allowed = (want_directory and $2) where id = $1 and connect and kabam_status = 'approved' returning name"
+        : "update public.app_submissions set kabam_status = 'rejected', directory_allowed = false, kabam_by = $2, kabam_at = now() where id = $1 and kabam_status = 'approved' returning name",
+      decision === "directory" ? [sid, directory] : [sid, s.profile.id],
+    );
+    if (!rows[0]) back({ error: "האתר לא נמצא" });
+    if (decision === "revoke") await db.query("delete from public.oauth_tokens where site_id = $1", [sid]);
+    if (decision === "directory" && !directory) await db.query("update public.oauth_tokens set directory = false where site_id = $1", [sid]);
+    await audit(db, s.profile.id, `app.submission.kabam_${decision}`, sid, { name: rows[0].name, directory });
+    back({ ok: decision === "revoke" ? `האישור של "${rows[0].name}" בוטל — האתר מנותק` : directory ? "הגישה לרשימת האנשים אושרה" : "הגישה לרשימת האנשים בוטלה" });
+  }
+  back({ error: "פעולה לא מוכרת" });
 }

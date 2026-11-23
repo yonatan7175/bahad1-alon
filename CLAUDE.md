@@ -14,6 +14,7 @@ This repo is the **Alon battalion portal** ([`plan.md`](plan.md) is the approved
 - RLS is enabled on every table. Browsers may only `select` their own `profiles` row. All other access is server code connecting as the table owner. New tables: `enable row level security` + revoke from `anon, authenticated` (and add the same to `supabase/post-restore.sql`).
 - Secrets (`SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PRIVATE_KEY`, `CRON_SECRET`, `DATABASE_URL`) are server-only. Never prefix them `NEXT_PUBLIC_` and never commit them.
 - Mock auth and PGlite are refused in production builds (`authMode()`, `getDb()`). Keep it that way.
+- **"התחברות עם צ1" for outside websites** (`src/platform/auth/connect.ts`, `/oauth/authorize`, `/api/connect/*`): OAuth code + PKCE, tokens stored hashed, 24 h, read-only (the user; the directory only when the קב״מית allowed it). CORS only for the site's own origin and never with credentials; a token only works from its own site's origin. A site needs the קב״מית's approval AND an admin's. Never let a connect token reach `executeCall` or any write.
 
 ## Single sources — edit here, then regenerate
 | What | Source | Generated into (`pnpm gen`) |

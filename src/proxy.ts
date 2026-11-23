@@ -108,7 +108,7 @@ export const config = {
   matcher: [
     {
       source:
-        "/((?!_next/static|_next/image|apps/|app-icons/|icons/|fonts/|favicon.ico|sw.js|bahad.js|bahad.css|bahad.d.ts|robots.txt|brand/).*)",
+        "/((?!_next/static|_next/image|apps/|app-icons/|icons/|fonts/|favicon.ico|sw.js|connect.js|bahad.js|bahad.css|bahad.d.ts|robots.txt|brand/).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },

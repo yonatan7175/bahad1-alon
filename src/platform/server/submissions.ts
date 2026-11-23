@@ -20,6 +20,15 @@ export interface Submission {
   embed_checked_at: Date | null;
   embed_mode: EmbedMode;
   review_note: string | null;
+  /** "התחברות עם צ1": the site signs users in with the portal. */
+  connect: boolean;
+  want_directory: boolean;
+  directory_allowed: boolean;
+  /** The קב״מית's separate approval (null = approved before the directive / GitHub). */
+  kabam_status: "pending" | "approved" | "rejected" | null;
+  kabam_note: string | null;
+  kabam_name: string | null;
+  kabam_at: Date | null;
   submitted_by: string | null;
   submitter_name: string | null;
   reviewer_name: string | null;
@@ -28,10 +37,12 @@ export interface Submission {
 }
 
 const COLS = `s.id, s.kind, s.name, s.description, s.url, s.emoji, s.icon, s.status, s.embed_url, s.embed_note, s.embed_checked_at, s.embed_mode, s.review_note, s.submitted_by,
+  s.connect, s.want_directory, s.directory_allowed, s.kabam_status, s.kabam_note, k.full_name as kabam_name, s.kabam_at,
   p.full_name as submitter_name, r.full_name as reviewer_name, s.reviewed_at, s.created_at`;
 const FROM = `public.app_submissions s
   left join public.profiles p on p.id = s.submitted_by
-  left join public.profiles r on r.id = s.reviewed_by`;
+  left join public.profiles r on r.id = s.reviewed_by
+  left join public.profiles k on k.id = s.kabam_by`;
 
 export async function mySubmissions(db: Db, userId: string): Promise<Submission[]> {
   const { rows } = await db.query<Submission>(`select ${COLS} from ${FROM} where s.submitted_by = $1 order by s.created_at desc limit 30`, [userId]);
@@ -68,6 +79,15 @@ export async function recordEmbedProbe(db: Db, id: string, url: string): Promise
   const r = await probeEmbed(url);
   await db.query("update public.app_submissions set embed_url = $2, embed_note = $3, embed_checked_at = now() where id = $1", [id, r.embedUrl, r.note.slice(0, 200)]);
   return r;
+}
+
+/** For the קב״מית: website suggestions waiting for her, and the connected sites she approved (to manage). */
+export async function kabamQueue(db: Db): Promise<{ pending: Submission[]; connected: Submission[] }> {
+  const [pending, connected] = await Promise.all([
+    db.query<Submission>(`select ${COLS} from ${FROM} where s.kind = 'url' and s.status = 'pending' and s.kabam_status = 'pending' order by s.created_at asc limit 100`),
+    db.query<Submission>(`select ${COLS} from ${FROM} where s.kind = 'url' and s.connect and s.status <> 'rejected' and s.kabam_status = 'approved' order by s.name asc limit 200`),
+  ]);
+  return { pending: pending.rows, connected: connected.rows };
 }
 
 export async function pendingSubmissionCount(db: Db): Promise<number> {

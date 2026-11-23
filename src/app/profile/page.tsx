@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BadgeCheck, Bell, ChevronLeft, DoorOpen, KeyRound, Palette, Phone, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Bell, ChevronLeft, DoorOpen, KeyRound, Link2, Palette, Phone, ShieldCheck, Unplug } from "lucide-react";
 import { requireApproved } from "@/platform/auth/session";
 import { getDb } from "@/platform/server/db";
 import { loadOverrides, visibleApps } from "@/platform/server/registry";
@@ -16,6 +16,8 @@ import { RoomForm } from "./room-form";
 import { PrivacyToggles } from "./privacy-toggles";
 import { PasswordChangeForm } from "./password-form";
 import { usernameOf } from "@/platform/auth/password";
+import { connectedSites } from "@/platform/auth/connect";
+import { disconnectConnectedSite } from "./actions";
 import { MyPositionsList } from "../roles/positions-ui";
 import { myPositions, positionLabel } from "@/platform/server/positions";
 import type { ReactNode } from "react";
@@ -40,6 +42,7 @@ export default async function ProfilePage() {
   const db = await getDb();
   const positions = await myPositions(db, p.id);
   const username = await usernameOf(db, p.id);
+  const sites = await connectedSites(db, p.id);
   const contactApps = visibleApps(p.role, await loadOverrides(db))
     .map((x) => x.app)
     .filter((a) => a.effectiveScopes.includes("contact"));
@@ -122,6 +125,36 @@ export default async function ProfilePage() {
             )}
             <p className="mt-3 text-xs text-subtle">כל אפליקציה מקבלת שם ותמונה. ההרשאות של כל אפליקציה מופיעות בתפריט ⋮ ← &quot;על האפליקציה&quot;.</p>
           </Section>
+
+          {sites.length ? (
+            <Section icon={<Link2 aria-hidden="true" />} title="אתרים מחוברים">
+              <p className="mb-2 text-sm text-muted">אתרים שנכנסת אליהם עם החשבון שלך בצ1. ניתוק מוחק את הגישה שלהם מיד.</p>
+              <ul className="list-group">
+                {sites.map((x) => (
+                  <li key={x.id} className="list-row">
+                    <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-ctl bg-surface-2 text-xl" aria-hidden="true">
+                      {x.icon ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- validated data: URL icon
+                        <img src={x.icon} alt="" className="size-full object-cover" />
+                      ) : (
+                        x.emoji
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold">{x.name}</span>
+                      <span className="block truncate text-xs text-muted">{x.directory ? "הפרטים שלך + רשימת אנשי הגדוד" : "הפרטים שלך"}</span>
+                    </span>
+                    <form action={disconnectConnectedSite}>
+                      <input type="hidden" name="site" value={x.id} />
+                      <button type="submit" className="btn-ghost min-h-11 text-sm text-danger" aria-label={`ניתוק ${x.name}`}>
+                        <Unplug className="size-4" aria-hidden="true" /> ניתוק
+                      </button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          ) : null}
 
           {username ? (
             <Section icon={<KeyRound aria-hidden="true" />} title="סיסמה">

@@ -4,6 +4,7 @@ import { getSession } from "@/platform/auth/session";
 import { getDb } from "@/platform/server/db";
 import { normalizePhone, normalizeRoom } from "@/lib/validate";
 import { changePassword } from "@/platform/auth/password";
+import { disconnectSite } from "@/platform/auth/connect";
 import { audit } from "@/platform/server/audit";
 
 export async function savePhone(_prev: { error?: string; ok?: boolean }, form: FormData): Promise<{ error?: string; ok?: boolean }> {
@@ -48,4 +49,16 @@ export async function savePassword(_prev: { error?: string; ok?: boolean }, form
   if (error) return { error };
   await audit(db, s.profile.id, "user.password_change", s.profile.id, {});
   return { ok: true };
+}
+
+/** "אתרים מחוברים": the user disconnects a site — its tokens stop working and it asks again next time. */
+export async function disconnectConnectedSite(form: FormData): Promise<void> {
+  const s = await getSession();
+  if (!s || s.profile.status !== "approved") return;
+  const siteId = String(form.get("site") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(siteId)) return;
+  const db = await getDb();
+  await disconnectSite(db, s.profile.id, siteId);
+  await audit(db, s.profile.id, "site.disconnect", siteId, {});
+  revalidatePath("/profile");
 }

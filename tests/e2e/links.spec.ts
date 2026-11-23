@@ -1,16 +1,27 @@
 // "הוספת אפליקציה": an approved website opens INSIDE the portal (like a built-in app) when it allows
 // framing, and in a new tab when it doesn't. The probe runs with BAHAD_EMBED_PROBE_FAKE=1 (see
 // playwright.config.ts): *.frame.test can be framed, every other host answers X-Frame-Options: DENY.
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 import { newUserPage } from "./helpers";
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+
+async function kabamApproves(browser: Browser, names: string[], opts: { directory?: boolean } = {}) {
+  const kabam = await newUserPage(browser, "commander@example.com", "/a/add-app"); // holds the קב״מית position in the dev seed
+  for (const name of names) {
+    const row = kabam.page.locator("li", { hasText: name }).filter({ has: kabam.page.getByTestId("kabam-review") });
+    if (opts.directory) await row.getByLabel("לאשר גישה לרשימת אנשי הגדוד").check();
+    await row.getByRole("button", { name: "אישור קב״מית", exact: true }).click();
+    await expect(kabam.page.locator("p[role=status]")).toContainText(name);
+  }
+  await kabam.ctx.close();
+}
 
 async function suggest(page: Page, url: string, name: string) {
   await page.goto("/a/add-app");
   await page.getByLabel("כתובת האתר").fill(url);
   await page.getByLabel(/^שם/).fill(name);
-  await page.getByRole("button", { name: "שליחה לאישור מנהל" }).click();
+  await page.getByRole("button", { name: "שליחה לאישור" }).click();
   await expect(page.locator("p[role=status]")).toContainText("ההצעה נשלחה");
 }
 
@@ -22,7 +33,11 @@ test("approved websites open inside the portal when they allow it", async ({ bro
   await expect(cadet.page.locator("li", { hasText: "כלי בתוך האתר" }).getByTestId("embed-status")).toContainText("נפתח בתוך האתר");
   await expect(cadet.page.locator("li", { hasText: "אתר שחוסם" }).getByTestId("embed-status")).toContainText("נפתח בלשונית חדשה");
 
+  // The קב״מית approves first (her separate approval, /kabam); until then the admin can't.
   const admin = await newUserPage(browser, "admin@example.com", "/a/add-app");
+  await expect(admin.page.locator("li", { hasText: "כלי בתוך האתר" }).getByRole("button", { name: "אישור — הוספה לאתר" })).toBeDisabled();
+  await kabamApproves(browser, ["כלי בתוך האתר", "אתר שחוסם"]);
+  await admin.page.reload();
   for (const name of ["כלי בתוך האתר", "אתר שחוסם"]) {
     await admin.page.locator("li", { hasText: name }).getByRole("button", { name: "אישור — הוספה לאתר" }).click();
     await expect(admin.page.locator("p[role=status]")).toContainText(name);
@@ -93,6 +108,8 @@ test("a hand-made /l/ path can never frame another site", async ({ browser }) =>
   const admin = await newUserPage(browser, "admin@example.com");
   const cadet = await newUserPage(browser, "cadet3@example.com");
   await suggest(cadet.page, "https://safe.frame.test/", "אתר בטוח");
+  await kabamApproves(browser, ["אתר בטוח"]);
+  await admin.page.reload();
   await admin.page.goto("/a/add-app");
   await admin.page.locator("li", { hasText: "אתר בטוח" }).getByRole("button", { name: "אישור — הוספה לאתר" }).click();
   await expect(admin.page.locator("p[role=status]")).toContainText("נפתח בתוך האתר");
