@@ -1,7 +1,7 @@
 // הוספת אפליקציה — suggest a website (shown as a link tile on the home page after an admin approves)
 // or a GitHub repository (after approval it is only saved in a list the admin sees).
 import Link from "next/link";
-import { AppWindow, Check, CircleAlert, ExternalLink, FolderGit2, Globe, Inbox, KeyRound, RefreshCw, Send, Stamp, Trash2, UsersRound, X } from "lucide-react";
+import { AppWindow, Check, ChevronDown, CircleAlert, Code2, ExternalLink, FolderGit2, Globe, Inbox, KeyRound, RefreshCw, Send, Stamp, Trash2, UsersRound, X } from "lucide-react";
 import { AppPage } from "@/components/app-page";
 import { requireApproved } from "@/platform/auth/session";
 import { getDb } from "@/platform/server/db";
@@ -10,6 +10,8 @@ import { isKabam as isKabamHolder } from "@/platform/auth/connect";
 import { MAX_PENDING_PER_USER } from "@/lib/submissions";
 import { frameUrlOf, linkAppPath, linkOpensInside } from "@/lib/embed";
 import { IconPicker } from "./icon-picker";
+import { CopyPrompt } from "./copy-prompt";
+import { TEMPLATE_URL, connectPrompt } from "@/lib/connect-guide";
 import { kabamReview, recheckAllEmbeds, recheckEmbed, removeSubmission, reviewSubmission, setEmbedMode, submitApp, withdrawSubmission } from "./actions";
 
 export const metadata = { title: "הוספת אפליקציה" };
@@ -332,6 +334,8 @@ export default async function Page(props: PageProps<"/a/add-app">) {
           </form>
         </section>
 
+        <DevGuide />
+
         <Section title="ההצעות שלי" icon={<Inbox className="size-5 text-accent" aria-hidden="true" />} count={mine.length} empty="עוד לא הצעת אפליקציות.">
           {mine.map((s) => (
             <Row key={s.id} s={s}>
@@ -500,5 +504,75 @@ function KabamSection({ pending, connected }: { pending: Submission[]; connected
         ))}
       </Section>
     </>
+  );
+}
+
+const PORTAL = (process.env.NEXT_PUBLIC_SITE_URL || "https://bahad1-alon.duckdns.org").replace(/\/$/, "");
+
+const STEPS: [string, React.ReactNode][] = [
+  ["מתכוננים", <>מתקינים <b>Claude Code</b> (claude.com/claude-code), יוצרים תיקייה ריקה לאתר ופותחים בה את Claude Code.</>],
+  ["מדביקים את הפרומפט", <>מעתיקים את הפרומפט למטה, מדביקים ב-Claude Code ומתארים את הרעיון. הוא כבר יודע את כל החוקים ואיך מתחברים עם צ1.</>],
+  ["בודקים במחשב", <>מריצים <code dir="ltr">npx serve .</code> ופותחים את הכתובת שמופיעה. במחשב האתר עובד <b>במצב דמו</b>: משתמש לדוגמה ורשימת אנשים מזויפת, בלי שום רישום.</>],
+  ["מעלים לאוויר", <>מפרסמים ב-<b>https</b>, למשל GitHub Pages (במאגר: Settings ← Pages), Vercel או Netlify.</>],
+  ["מציעים כאן", <>בטופס למעלה: <b>אתר</b> ← הכתובת ← מסמנים <b>&quot;האתר מתחבר עם צ1&quot;</b> (ו&quot;רשימת אנשי הגדוד&quot; רק אם באמת צריך).</>],
+  ["בודקים באמת", <>עד האישור <b>רק את/ה</b> יכול/ה להתחבר לאתר, בכתובת האמיתית שלו, כדי לוודא שהכול עובד.</>],
+  ["אישור ועלייה", <>הקב״מית מאשרת (ואת רשימת האנשים בנפרד), מנהל האתר מוסיף, והאתר מופיע כאריח בדף הבית לכולם.</>],
+];
+
+/** "איך מפתחים אתר שמתחבר עם צ1": the steps + a Claude Code prompt to copy. */
+function DevGuide() {
+  return (
+    <section className="card overflow-hidden p-0">
+      <details className="group">
+        <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
+            <Code2 className="size-5" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-extrabold">פיתוח אתר שמתחבר עם צ1</span>
+            <span className="block text-sm text-muted">מהרעיון לאריח בדף הבית — עם Claude Code, בלי ניסיון קודם</span>
+          </span>
+          <ChevronDown className="size-5 shrink-0 text-subtle transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <div className="border-t border-line px-4 pb-5 pt-4">
+          <ol className="space-y-3">
+            {STEPS.map(([title, text], i) => (
+              <li key={title} className="flex gap-3">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-black text-accent-contrast">{i + 1}</span>
+                <span className="pt-0.5 text-[14px] leading-relaxed">
+                  <b className="block text-[15px]">{title}</b>
+                  {text}
+                </span>
+              </li>
+            ))}
+          </ol>
+
+          <div className="mt-5 grid gap-2 text-[13px] sm:grid-cols-3">
+            <p className="rounded-ctl bg-surface-2 p-3">
+              <b className="block">האתר מקבל</b>את המשתמש המחובר: שם, תפקיד, פלוגה, צוות, חדר ותפקידים.
+            </p>
+            <p className="rounded-ctl bg-surface-2 p-3">
+              <b className="block">באישור קב״מית</b>את רשימת אנשי הגדוד (כמו בדף &quot;אנשים&quot;).
+            </p>
+            <p className="rounded-ctl bg-surface-2 p-3">
+              <b className="block">הנתונים של האתר</b>נשמרים אצלו, לא בצ1. השרת שלו מאמת משתמשים מול צ1.
+            </p>
+          </div>
+
+          <CopyPrompt text={connectPrompt(PORTAL)} />
+          <p className="mt-3 text-xs text-muted">
+            רוצים לראות דוגמה מוכנה?{" "}
+            <a href={TEMPLATE_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent underline-offset-4 hover:underline">
+              תבנית לדוגמה ב-GitHub
+            </a>{" "}
+            · לפני שמתחילים, קראו את{" "}
+            <Link href="/kabam" className="font-semibold text-accent underline-offset-4 hover:underline">
+              דבר הקב״מית
+            </Link>
+            .
+          </p>
+        </div>
+      </details>
+    </section>
   );
 }
